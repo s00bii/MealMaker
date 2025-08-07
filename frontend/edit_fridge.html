@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Fridge</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="background"></div>
+
+
+    <div class="edit-fridge-container">
+        <!-- Editable fridge name -->
+        <h2 contenteditable="true" class="fridge-name">Fridge One</h2>
+
+
+        <!-- Item list -->
+        <ul class="item-list" id="itemList">
+            <li class="item">
+                <span class="item-name" contenteditable="true">Milk</span>
+                <span class="item-qty" contenteditable="true">1000 ml</span>
+                <button class="delete-btn">×</button>
+            </li>
+            <li class="item">
+                <span class="item-name" contenteditable="true">Eggs</span>
+                <span class="item-qty" contenteditable="true">12</span>
+                <button class="delete-btn">×</button>
+            </li>
+        </ul>
+
+
+
+        <!-- Add buttons -->
+        <div class="controls">
+            <button id="addItemBtn">+ Add Item</button>
+            <a href=ai_fridge.html>
+                <button id="addAIButton">+ Add with AI</button>
+            </a>
+        </div>
+        
+
+        <!-- Back button -->
+        <div class="back-link">
+            <a href="index.html">← Back to Fridges</a>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

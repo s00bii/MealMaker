@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MealMaker</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="script.js"></script>
+</head>
+<body>
+    <!-- Background -->
+    <div class="background"></div>
+
+    <!-- Title -->
+    <div class = title>
+        <h1>MealMaker</h1>
+        <h3>By Subi</h3>
+    </div>
+
+    <!-- Overlay container -->
+    <div class="overlay">
+        <!-- Left fridge slots panel -->
+        <div class="fridge-panel">
+        <h2>Your Fridges</h2>
+        <a class="slot" href="edit_fridge.html?slot=1">
+            <span class="slot-text"></span>
+            <span class="slot-menu">⋮</span>
+        </a>
+        <a class="slot" href="edit_fridge.html?slot=2">
+            <span class="slot-text"></span>
+            <span class="slot-menu">⋮</span>
+        </a>
+        <a class="slot" href="edit_fridge.html?slot=3">
+            <span class="slot-text"></span>
+            <span class="slot-menu">⋮</span>
+        </a>
+        <a class="slot" href="edit_fridge.html?slot=4">
+            <span class="slot-text"></span>
+            <span class="slot-menu">⋮</span>
+        </a>
+        <a class="slot" href="edit_fridge.html?slot=5">
+            <span class="slot-text"></span>
+            <span class="slot-menu">⋮</span>
+        </a>
+    </div>
+
+
+        
+    <!-- Get Recipes Button -->
+    <div class="get-recipes-container">
+        <button id="getRecipesBtn" disabled>Get Recipes</button>
+    </div>
+    
+    <!-- Preferences Section -->
+    <div class="preferences">
+        <h3>Recipe Preferences</h3>
+        <label>
+            Min Calories:
+            <input type="number" id="calorieMin" value="200">
+        </label>
+        <label>
+            Max Calories:
+            <input type="number" id="calorieMax" value="1000">
+        </label>
+        <label>
+            Min Protein (g):
+            <input type="number" id="proteinMin" value="10">
+        </label>
+    </div>
+
+
+
+    <!-- AI feature rectangle -->
+    <div class="ai-banner">
+        <h3>Add with AI</h3>
+        <p>Feature under construction.</p>
+        <button disabled>Add with AI</button>
+    </div>
+</body>
+</html>

@@ -1,0 +1,447 @@
+/* Fullscreen background */
+body, html {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    font-family: Arial, sans-serif;
+}
+
+.background {
+  background-image: url('images/MealMaker_Background.jpeg'); /* Your original */
+  background-size: cover;
+  background-position: center center; /* Ensure true centering */
+  position: fixed;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  z-index: -1; /* Push behind everything */
+}
+
+
+.title {
+    position: absolute;
+    background-color: rgba(0, 0, 0, 0.6); /* Semi-transparent */
+    padding: 10px;
+    border-radius: 8px;
+    top: 20px;
+    right: 30px;
+    text-align: right;
+    color: #ff9800; /* Orange accent */
+}
+
+.title h1 {
+    margin: 0;
+    font-size: 2em;
+}
+
+.title h3 {
+    margin: 0;
+    font-size: 1em;
+    color: #ccc; /* Subtle grey for subtitle */
+}
+
+
+/* Overlay container for panels */
+.overlay {
+    display: flex;
+    justify-content: space-between;
+    height: 100%;
+    width: 100%;
+    padding: 2%;
+    box-sizing: border-box;
+}
+
+/* LEFT PANEL - Fridge Slots */
+.fridge-panel {
+    width: 30%;
+    background-color: rgba(0, 0, 0, 0.6); /* Semi-transparent */
+    padding: 20px;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    color: #4caf50; /* Green heading */
+}
+
+.fridge-name:focus {
+    outline: none;
+    background-color: rgba(76, 175, 80, 0.2);
+    border-radius: 5px;
+    transition: background 0.2s ease;
+}
+
+.fridge-panel h2 {
+    margin: 0 0 10px;
+    color: #4caf50;
+}
+
+/* Individual fridge slots */
+.slot {
+    display: flex; /* Change from block to flex for text + dots */
+    justify-content: space-between;
+    align-items: center;
+    text-decoration: none;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 15px;
+    border-radius: 8px;
+    color: #fff;
+    border: 1px solid #4caf50;
+    transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+    height: 20%;
+    cursor: pointer;
+}
+
+.slot:hover {
+    background: rgba(76, 175, 80, 0.2);
+    transform: scale(1.03);
+    box-shadow: 0px 4px 10px rgba(76, 175, 80, 0.3);
+}
+
+.slot.selected {
+    background-color: rgba(76, 175, 80, 0.3);
+    border: 2px solid #4caf50;
+}
+
+/* Three dots menu */
+.slot-menu {
+    position: relative;
+    bottom: 45%;
+    left: 0.7%;
+    font-size: 30px;
+    cursor: pointer;
+    padding-left: 10px;
+    user-select: none;
+    color: #fff;
+}
+
+.slot-menu:hover {
+    color: #ff9800; /* Orange hover */
+}
+
+
+
+/* AI Banner on right side (like "NEW GAME+" rectangle) */
+.ai-banner {
+    align-self: flex-end;
+    width: 30%;
+    background: rgba(255, 152, 0, 0.8); /* Orange translucent */
+    padding: 15px;
+    border-radius: 8px;
+    text-align: center;
+    color: #fff;
+}
+
+.ai-banner button {
+    margin-top: 10px;
+    padding: 8px 15px;
+    font-size: 14px;
+    border: none;
+    border-radius: 5px;
+    background: #666;
+    color: #fff;
+    cursor: not-allowed;
+}
+
+/* Responsive adjustments */
+@media screen and (max-width: 768px) {
+    .overlay {
+        flex-direction: column;
+        align-items: center;
+    }
+    .fridge-panel {
+        width: 90%;
+        margin-bottom: 20px;
+    }
+    .ai-banner {
+        width: 90%;
+    }
+}
+
+/* Edit fridge container */
+.edit-fridge-container {
+    max-width: 600px;
+    margin: 5% auto;
+    background-color: rgba(0, 0, 0, 0.7);
+    padding: 20px;
+    border-radius: 10px;
+    color: #fff;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.3);
+}
+
+/* Editable fridge name */
+.fridge-name {
+    text-align: center;
+    margin-bottom: 20px;
+    color: #4caf50;
+    cursor: text;
+    border-bottom: 1px dashed #4caf50;
+}
+
+/* Item list */
+.item-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 20px 0;
+}
+
+.item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 10px;
+    border-radius: 5px;
+    margin-bottom: 10px;
+    gap: 10px;
+    transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.item:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateX(5px);
+}
+
+.item-name,
+.item-qty {
+    cursor: text;
+    flex: 1;
+}
+
+.recipes-container {
+    max-width: 800px;
+    margin: 120px auto 40px auto;
+    padding: 20px;
+    background: rgba(0, 0, 0, 0.6);
+    border-radius: 10px;
+    color: #fff;
+}
+
+.recipe-card {
+    background: rgba(255, 255, 255, 0.1);
+    margin-bottom: 15px;
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid #4caf50;
+    transition: background 0.2s ease;
+}
+
+.recipe-card:hover {
+    background: rgba(76, 175, 80, 0.2);
+}
+
+.recipe-title {
+    font-size: 20px;
+    font-weight: bold;
+    color: #ff9800;
+    margin-bottom: 5px;
+}
+
+.recipe-meta {
+    font-size: 14px;
+    color: #ccc;
+}
+
+.recipe-link {
+    display: inline-block;
+    margin-top: 8px;
+    color: #4caf50;
+    text-decoration: none;
+}
+
+.recipe-link:hover {
+    text-decoration: underline;
+}
+
+.preferences {
+    position: absolute;
+    bottom: 23.5%; /* Below Get Recipes button */
+    left: 83%;
+    transform: translateX(-50%);
+    text-align: center;
+    background: rgba(0, 0, 0, 0.6);
+    padding: 15px;
+    border-radius: 10px;
+    color: #fff;
+    width: 40%;
+    max-width: 400px;
+}
+
+.preferences h3 {
+    margin-bottom: 10px;
+    color: #ff9800;
+}
+
+.preferences label {
+    display: block;
+    margin: 8px 0;
+    font-size: 14px;
+}
+
+.preferences input {
+    width: 80px;
+    padding: 5px;
+    margin-left: 5px;
+    border-radius: 5px;
+    border: none;
+    text-align: center;
+}
+
+/* Delete button */
+.delete-btn {
+    background: #ff4c4c;
+    border: none;
+    color: white;
+    font-size: 18px;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    cursor: pointer;
+}
+
+.delete-btn:hover {
+    background: #ff6666;
+}
+
+/* Controls (Add buttons) */
+.controls {
+    display: flex;
+    justify-content: space-between;
+}
+
+.controls button {
+    flex: 1;
+    margin: 0 5px;
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    background: #4caf50;
+    color: white;
+    font-size: 16px;
+}
+
+.controls button:disabled {
+    background: #666;
+    cursor: not-allowed;
+}
+
+/* Back link */
+.back-link {
+    text-align: center;
+    margin-top: 15px;
+}
+
+.back-link a {
+    text-decoration: none;
+    color: #ff9800;
+}
+
+.get-recipes-container {
+    position: absolute;
+    top: 50%;
+    left: 83%;
+    transform: translateX(-50%);
+    text-align: center;
+}
+
+#getRecipesBtn {
+    padding: 15px 30px;
+    font-size: 20px;
+    border: none;
+    border-radius: 8px;
+    background-color: #555; /* Grey when disabled */
+    color: #fff;
+    cursor: not-allowed;
+    transition: background 0.3s ease;
+}
+
+#getRecipesBtn.enabled {
+    background-color: #4caf50; /* Green when enabled */
+    cursor: pointer;
+}
+
+#getRecipesBtn.enabled:hover {
+    background-color: #45a049;
+}
+
+/* Ai HTML */
+body {
+  font-family: Arial, sans-serif;
+  background-color: #f5f5f5;
+  text-align: center;
+  padding: 2rem;
+}
+
+h1 {
+  color: #2c3e50;
+}
+
+#cameraWrapper {
+  position: relative;
+  display: inline-block;
+  border: 2px solid #4caf50;
+  border-radius: 12px;
+  overflow: hidden;
+  background-color: rgba(0, 0, 0, 0.4);
+  max-width: 90%;
+  box-shadow: 0 0 10px rgba(76, 175, 80, 0.3);
+}
+
+#cameraFeed {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 20px;
+}
+
+/* Capture button (floating circle) */
+#captureBtn {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60px;
+  height: 60px;
+  background-color: #1c1c1c;
+  border: 3px solid #4caf50;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+  transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+#captureBtn:hover {
+  background-color: #2e2e2e;
+  transform: translateX(-50%) scale(1.05);
+}
+
+#scanResult {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background-color: rgba(0, 0, 0, 0.6);
+  border-left: 4px solid #4caf50;
+  border-radius: 6px;
+  max-width: 500px;
+  margin-left: auto;
+  margin-right: auto;
+  color: #fff;
+  font-weight: bold;
+  box-shadow: 0 0 5px rgba(76, 175, 80, 0.3);
+}
+
+#previewContainer button {
+  padding: 10px 20px;
+  margin: 10px;
+  font-size: 16px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  background-color: #4caf50;
+  color: #fff;
+  transition: background 0.2s ease;
+}
+
+#previewContainer button:hover {
+  background-color: #45a049;
+}

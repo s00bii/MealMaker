@@ -1,0 +1,12 @@
+{
+  "fridges": [
+    {
+      "name": "Fridge Slot 1",
+      "items": { "Milk": "1000 ml", "Eggs": "12" }
+    },
+    {
+      "name": "Fridge Slot 2",
+      "items": {}
+    }
+  ]
+}

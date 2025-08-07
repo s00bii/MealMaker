@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>AI Fridge Scanner</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+ <h1>Scan Ingredients with AI</h1>
+
+   <div class="background"></div>
+
+  <div id="cameraWrapper">
+    <video id="cameraFeed" autoplay playsinline></video>
+    <button id="captureBtn"></button>
+  </div>
+
+  <canvas id="snapshotCanvas" style="display:none;"></canvas>
+
+  <div id="previewContainer" style="display:none;">
+    <h3>Preview</h3>
+    <img id="capturedImage" style="max-width:100%; border-radius: 12px;" />
+    <br>
+    <button id="retakeBtn">Retake</button>
+    <button id="confirmBtn">Confirm & Scan</button>
+  </div>
+
+
+  <div id="scanResult">Waiting to scan results...</div>
+
+
+    <script>
+        const video = document.getElementById("cameraFeed");
+        const canvas = document.getElementById("snapshotCanvas");
+        const captureBtn = document.getElementById("captureBtn");
+        const scanResult = document.getElementById("scanResult");
+        const previewContainer = document.getElementById("previewContainer");
+        const capturedImage = document.getElementById("capturedImage");
+        const retakeBtn = document.getElementById("retakeBtn");
+        const confirmBtn = document.getElementById("confirmBtn");
+
+        let stream = null;
+        const urlParams = new URLSearchParams(window.location.search);
+        const fridgeId = urlParams.get("fridge") || "default";
+
+        // Start camera
+        async function startCamera() {
+            stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            video.srcObject = stream;
+        }
+
+        // Stop camera
+        function stopCamera() {
+            if (stream) {
+            const tracks = stream.getTracks();
+            tracks.forEach(track => track.stop());
+            video.srcObject = null;
+            }
+        }
+
+        // Initial camera start
+        startCamera();
+
+        // Capture button
+        captureBtn.onclick = () => {
+            const ctx = canvas.getContext("2d");
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            // Convert canvas to image preview
+            const imageDataURL = canvas.toDataURL("image/jpeg");
+            capturedImage.src = imageDataURL;
+
+            // Pause feed and show preview
+            stopCamera();
+            previewContainer.style.display = "block";
+            captureBtn.style.display = "none";
+        };
+
+        // Retake
+        retakeBtn.onclick = () => {
+            previewContainer.style.display = "none";
+            captureBtn.style.display = "block";
+            startCamera();
+        };
+
+        // Confirm and Scan
+        confirmBtn.onclick = async () => {
+            canvas.toBlob(async (blob) => {
+            const formData = new FormData();
+            formData.append("photo", blob, "captured_frame.jpg");
+            formData.append("fridge_id", fridgeId);
+
+            const res = await fetch("/scan_image", {
+                method: "POST",
+                body: formData
+            });
+
+            const result = await res.json();
+            if (result.status === "success") {
+                scanResult.innerText = "Detected and added to fridge: " + result.items.join(", ");
+            } else {
+                scanResult.innerText = "Error: Unable to detect ingredients.";
+            }
+
+            // Hide preview after submission
+            previewContainer.style.display = "none";
+            }, "image/jpeg");
+        };
+    </script>
+
+</body>
+</html>
