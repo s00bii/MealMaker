@@ -2,7 +2,7 @@
 <html>
 <head>
   <title>AI Fridge Scanner</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 
 <body>
@@ -30,6 +30,9 @@
 
 
     <script>
+        console.log("✅ JS loaded and fridgeId =", fridgeId);
+        console.log("📸 confirmBtn:", confirmBtn);
+        
         const video = document.getElementById("cameraFeed");
         const canvas = document.getElementById("snapshotCanvas");
         const captureBtn = document.getElementById("captureBtn");
@@ -87,10 +90,13 @@
 
         // Confirm and Scan
         confirmBtn.onclick = async () => {
+            console.log("🟢 Sending form data to /scan_image...");
+
             canvas.toBlob(async (blob) => {
-            const formData = new FormData();
-            formData.append("photo", blob, "captured_frame.jpg");
-            formData.append("fridge_id", fridgeId);
+                console.log("🧾 FormData:", [...formData]);
+                const formData = new FormData();
+                formData.append("photo", blob, "captured_frame.jpg");
+                formData.append("fridge_id", fridgeId);
 
             const res = await fetch("/scan_image", {
                 method: "POST",

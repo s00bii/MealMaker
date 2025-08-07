@@ -4,7 +4,7 @@ from ultralytics import YOLO
 import os
 import json
 from datetime import datetime
-
+from flask import render_template
 from fridge_logic import get_possible_recipes
 
 # Initialize app
@@ -18,6 +18,17 @@ os.makedirs(IMAGE_FOLDER, exist_ok=True)
 
 # Load YOLOv8 model once
 model = YOLO("yolov8n.pt")  # Replace with food-trained model if needed
+
+@app.route("/ai")
+def ai_page():
+    return render_template("ai_fridge.html")
+@app.route("/index")
+def index():
+    return render_template("index.html")
+
+@app.route("/edit")
+def edit_fridge():
+    return render_template("edit_fridge.html")
 
 # === ROUTE: Recipe Finder ===
 @app.route("/get_recipes", methods=["POST"])
@@ -61,47 +72,63 @@ def get_recipes():
 # === ROUTE: Scan Image and Detect Ingredients ===
 @app.route("/scan_image", methods=["POST"])
 def scan_image():
-    image = request.files["photo"]
-    fridge_id = request.form.get("fridge_id", "default")
+    try:
+        image = request.files.get("photo")
+        fridge_id = request.form.get("fridge_id", "default")
+        print("✅ Received photo:", image.filename)
+        print("✅ Fridge ID:", fridge_id)
 
-    # Save uploaded image with timestamp
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"{fridge_id}_{timestamp}.jpg"
-    image_path = os.path.join(IMAGE_FOLDER, filename)
-    image.save(image_path)
+        if not image:
+            print("x No image received")
+            return jsonify({"status": "error", "message": "No image received"})
 
-    # Run detection
-    results = model(image_path)
-    detected_items = set()
+        # Save uploaded image with timestamp
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"{fridge_id}_{timestamp}.jpg"
+        image_path = os.path.join(IMAGE_FOLDER, filename)
 
-    for r in results:
-        for c in r.boxes.cls:
-            label = model.names[int(c)]
-            detected_items.add(label.lower())
+        print("📸 Saving image to:", image_path)
+        image.save(image_path)
+        print("✅ Image saved")
 
-    # Load fridges
-    if os.path.exists(FRIDGE_PATH):
-        with open(FRIDGE_PATH, "r") as f:
-            fridges = json.load(f)
-    else:
-        fridges = {}
+        # Run detection
+        results = model(image_path)
+        detected_items = set()
 
-    # Update fridge dict
-    if fridge_id not in fridges:
-        fridges[fridge_id] = {}
+        for r in results:
+            for c in r.boxes.cls:
+                label = model.names[int(c)]
+                detected_items.add(label.lower())
 
-    for item in detected_items:
-        fridges[fridge_id][item] = 1  # Default to full
+        print("🧠 Detected:", detected_items)
 
-    with open(FRIDGE_PATH, "w") as f:
-        json.dump(fridges, f, indent=2)
+        # Load/update fridge
+        if os.path.exists(FRIDGE_PATH):
+            with open(FRIDGE_PATH, "r") as f:
+                fridges = json.load(f)
+        else:
+            fridges = {}
 
-    return jsonify({
-        "status": "success",
-        "fridge": fridge_id,
-        "items": list(detected_items),
-        "image_path": image_path
-    })
+        if fridge_id not in fridges:
+            fridges[fridge_id] = {}
+
+        for item in detected_items:
+            fridges[fridge_id][item] = 1
+
+        with open(FRIDGE_PATH, "w") as f:
+            json.dump(fridges, f, indent=2)
+
+        return jsonify({
+            "status": "success",
+            "fridge": fridge_id,
+            "items": list(detected_items),
+            "image_path": image_path
+        })
+
+    except Exception as e:
+        print("X Exception occurred:", str(e))
+        return jsonify({"status": "error", "message": str(e)})
+
 
 # === MAIN ===
 if __name__ == "__main__":
