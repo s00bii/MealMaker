@@ -85,58 +85,32 @@ def scan_image():
     try:
         image = request.files.get("photo")
         fridge_id = request.form.get("fridge_id", "default")
-        print("✅ Received photo:", image.filename)
-        print("✅ Fridge ID:", fridge_id)
-
         if not image:
-            print("x No image received")
             return jsonify({"status": "error", "message": "No image received"})
 
-        # Save uploaded image with timestamp
+        # Save uploaded image (optional; useful for debugging/model runs)
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"{fridge_id}_{timestamp}.jpg"
         image_path = os.path.join(IMAGE_FOLDER, filename)
-
-        print("📸 Saving image to:", image_path)
         image.save(image_path)
-        print("✅ Image saved")
 
-        # Run detection
+        # Run detection (YOLO)
         results = model(image_path)
         detected_items = set()
-
         for r in results:
             for c in r.boxes.cls:
                 label = model.names[int(c)]
                 detected_items.add(label.lower())
 
-        print("🧠 Detected:", detected_items)
-
-        # Load/update fridge
-        if os.path.exists(FRIDGE_PATH):
-            with open(FRIDGE_PATH, "r") as f:
-                fridges = json.load(f)
-        else:
-            fridges = {}
-
-        if fridge_id not in fridges:
-            fridges[fridge_id] = {}
-
-        for item in detected_items:
-            fridges[fridge_id][item] = 1
-
-        with open(FRIDGE_PATH, "w") as f:
-            json.dump(fridges, f, indent=2)
-
+        # IMPORTANT: do NOT persist here — just return the detections
         return jsonify({
             "status": "success",
             "fridge": fridge_id,
-            "items": list(detected_items),
+            "items": sorted(detected_items),  # let the client review/confirm
             "image_path": image_path
         })
 
     except Exception as e:
-        print("X Exception occurred:", str(e))
         return jsonify({"status": "error", "message": str(e)})
     
 @app.route("/save_frame", methods=["POST"])
@@ -154,7 +128,67 @@ def save_frame():
     with open(fpath, "wb") as f:
         f.write(img_bytes)
 
+@app.route("/add_items", methods=["POST"])
+def add_items():
+    """
+    Body: { "fridge_id": "1", "items": ["milk","eggs",...] }
+    """
+    try:
+        payload = request.get_json(silent=True) or {}
+        fridge_id = str(payload.get("fridge_id", "default"))
+        items = payload.get("items", [])
+        items = [i.strip().lower() for i in items if i and isinstance(i, str)]
+
+        # load file
+        if os.path.exists(FRIDGE_PATH):
+            with open(FRIDGE_PATH, "r") as f:
+                fridges = json.load(f)
+        else:
+            fridges = {}
+
+        fridges.setdefault(fridge_id, {})
+        for it in items:
+            fridges[fridge_id][it] = fridges[fridge_id].get(it, 0) or 1
+
+        with open(FRIDGE_PATH, "w") as f:
+            json.dump(fridges, f, indent=2)
+
+        return jsonify({"ok": True, "fridge": fridge_id, "added": items})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 400
+
     return jsonify({"ok": True, "url": url_for('static', filename=f'images/{fname}')})
+
+@app.route("/confirm_items", methods=["POST"])
+def confirm_items():
+    """
+    Body: { "fridge_id": "1", "items": ["milk","cheese","eggs"] }
+    Writes to MealMaker/data/fridges.json
+    """
+    try:
+        payload = request.get_json(silent=True) or {}
+        fridge_id = str(payload.get("fridge_id", "default"))
+        items = payload.get("items", [])
+        items = [i.strip().lower() for i in items if isinstance(i, str) and i.strip()]
+
+        # Load existing file
+        if os.path.exists(FRIDGE_PATH):
+            with open(FRIDGE_PATH, "r") as f:
+                fridges = json.load(f)
+        else:
+            fridges = {}
+
+        fridges.setdefault(fridge_id, {})
+        for it in items:
+            # set default qty "1" if not present
+            fridges[fridge_id][it] = fridges[fridge_id].get(it, 0) or 1
+
+        with open(FRIDGE_PATH, "w") as f:
+            json.dump(fridges, f, indent=2)
+
+        return jsonify({"ok": True, "fridge": fridge_id, "added": items})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 400
 
 
 # === MAIN ===

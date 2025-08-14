@@ -445,3 +445,78 @@ h1 {
 #previewContainer button:hover {
   background-color: #45a049;
 }
+
+/* === AI Review Modal === */
+#scanResult.as-modal {
+  position: fixed;
+  inset: 0;                  /* top/right/bottom/left: 0 */
+  display: grid;
+  place-items: center;
+  background: rgba(0,0,0,0.45);
+  z-index: 1000;
+  padding: 20px;
+}
+
+/* The card that holds the checklist */
+#reviewList {
+  width: min(560px, 92vw);
+  background: #fff;
+  border-radius: 16px;
+  padding: 18px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.22);
+}
+
+#reviewList h3 {
+  margin: 0 0 10px 0;
+  font-size: 1.1rem;
+}
+
+/* Rows in the checklist */
+#reviewList .row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0;
+}
+
+#reviewList .name {
+  flex: 1;
+  padding: 8px 10px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+}
+
+/* Buttons in the modal */
+#addManualBtn {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background: #f7f7f7;
+  cursor: pointer;
+}
+
+#addSelectedBtn {
+  padding: 10px 14px;
+  border: 0;
+  border-radius: 10px;
+  background: #111;
+  color: #fff;
+  cursor: pointer;
+  margin-top: 6px;
+}
+
+#addSelectedBtn:hover { opacity: 0.9; }
+
+/* Manual input */
+#manualItem {
+  min-width: 200px;
+  padding: 8px 10px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+}
+
+/* Mobile polish */
+@media (max-width: 480px) {
+  #reviewList { padding: 14px; }
+  #reviewList .name { min-width: 140px; }
+}

@@ -33,7 +33,7 @@
 
   <div id="scanResult">Waiting to scan results...</div>
 
-     <script>
+    <script>
         const video = document.getElementById("cameraFeed");
         const canvas = document.getElementById("snapshotCanvas");
         const captureBtn = document.getElementById("captureBtn");
@@ -45,22 +45,120 @@
 
         let stream = null;
         const urlParams = new URLSearchParams(window.location.search);
-        const fridgeId = urlParams.get("fridge") || "default";
+        const fridgeId = parseInt(urlParams.get("fridge") || "1", 10); // 1..5
 
-        console.log("✅ JS loaded and fridgeId =", fridgeId);
-        console.log("📸 confirmBtn:", confirmBtn);
-
-        async function startCamera() {
-            stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        // --- utils ---
+        function startCamera() {
+            return navigator.mediaDevices.getUserMedia({ video: true }).then(str => {
+            stream = str;
             video.srcObject = stream;
+            });
         }
         function stopCamera() {
             if (!stream) return;
             stream.getTracks().forEach(t => t.stop());
             video.srcObject = null;
         }
+        function normalizeItem(s) {
+            if (!s) return s;
+            s = s.trim().toLowerCase();
+            const alias = {
+            cheddar: "cheese",
+            mozzarella: "cheese",
+            parmesan: "cheese",
+            "cheese block": "cheese"
+            };
+            return alias[s] || s;
+        }
 
-        // Start
+        // Render review list with checkboxes + editable names + manual add
+        function renderReview(items) {
+            const uniq = Array.from(new Set(items.map(normalizeItem))).sort();
+            const wrap = document.createElement("div");
+            wrap.id = "reviewList";
+            wrap.style.marginTop = "16px";
+
+            const rows = uniq.map((i, idx) => `
+            <div class="row" style="display:flex;align-items:center;gap:8px;margin:6px 0;">
+                <input type="checkbox" class="keep" id="k_${idx}" checked>
+                <input type="text" class="name" value="${i}" style="flex:0 1 220px;padding:6px 8px;border:1px solid #ccc;border-radius:8px;">
+            </div>
+            `).join("");
+
+            wrap.innerHTML = `
+            <h3>Confirm items</h3>
+            ${rows}
+            <div style="display:flex;align-items:center;gap:8px;margin-top:12px;">
+                <input id="manualItem" placeholder="Add missing item…" style="flex:0 1 220px;padding:6px 8px;border:1px solid #ccc;border-radius:8px;">
+                <button id="addManualBtn" type="button">Add</button>
+            </div>
+            <div style="margin-top:16px;">
+                <button id="addSelectedBtn" type="button">Add Selected to Fridge ${fridgeId}</button>
+            </div>
+            `;
+
+            scanResult.replaceChildren(wrap);
+
+            scanResult.classList.add('as-modal');
+
+            document.getElementById("addManualBtn").onclick = () => {
+            const inp = document.getElementById("manualItem");
+            const val = normalizeItem(inp.value);
+            if (!val) return;
+            const row = document.createElement("div");
+            row.className = "row";
+            row.style.cssText = "display:flex;align-items:center;gap:8px;margin:6px 0;";
+            row.innerHTML = `
+                <input type="checkbox" class="keep" checked>
+                <input type="text" class="name" value="${val}" style="flex:0 1 220px;padding:6px 8px;border:1px solid #ccc;border-radius:8px;">
+            `;
+            wrap.insertBefore(row, wrap.querySelector("#addSelectedBtn").parentElement);
+            inp.value = "";
+            };
+
+            document.getElementById("addSelectedBtn").onclick = async () => {
+            const rows = wrap.querySelectorAll(".row");
+            const selected = [];
+            rows.forEach(r => {
+                const keep = r.querySelector(".keep").checked;
+                const name = normalizeItem(r.querySelector(".name").value);
+                if (keep && name) selected.push(name);
+            });
+            if (!selected.length) {
+                alert("Select at least one item to add.");
+                return;
+            }
+
+            // Update localStorage fridge slot
+            const fridges = JSON.parse(localStorage.getItem("fridges") || "[]");
+            const idx = fridgeId - 1;
+            if (!fridges[idx]) {
+                alert("Invalid fridge index.");
+                return;
+            }
+            fridges[idx].items = fridges[idx].items || {};
+            selected.forEach(n => {
+                if (!fridges[idx].items[n]) fridges[idx].items[n] = "1";
+            });
+            localStorage.setItem("fridges", JSON.stringify(fridges));
+
+            // Also persist to server for parity (optional but recommended)
+            try {
+                await fetch(`${window.location.origin}/confirm_items`, {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({ fridge_id: String(fridgeId), items: selected })
+                });
+            } catch (e) {
+                console.warn("Server persist failed/skipped:", e);
+            }
+
+            // Return to that fridge’s edit page
+            window.location.href = `/edit?slot=${fridgeId}`;
+            };
+        }
+
+        // --- lifecycle ---
         startCamera();
 
         // Capture → preview
@@ -83,23 +181,24 @@
             startCamera();
         };
 
-        // Confirm & Scan → POST /scan_image as multipart/form-data
+        // Confirm & Scan → POST /scan_image (no persistence here)
         confirmBtn.onclick = () => {
             canvas.toBlob(async (blob) => {
             const formData = new FormData();
             formData.append("photo", blob, "captured_frame.jpg");
-            formData.append("fridge_id", fridgeId);
+            formData.append("fridge_id", String(fridgeId));
 
             const res = await fetch(`${window.location.origin}/scan_image`, {
                 method: "POST",
                 body: formData
             });
-
             let result;
             try { result = await res.json(); } catch { result = { status: "error" }; }
 
             if (result.status === "success") {
-                scanResult.innerText = "Detected and added to fridge: " + result.items.join(", ");
+                const detected = Array.isArray(result.items) ? result.items : [];
+                scanResult.innerText = "";   // clear
+                renderReview(detected);      // review/confirm UI
             } else {
                 scanResult.innerText = "Error: Unable to detect ingredients.";
             }
@@ -107,7 +206,7 @@
             previewContainer.style.display = "none";
             }, "image/jpeg");
         };
-     </script>
+    </script>
 
 </body>
 </html>
