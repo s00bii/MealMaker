@@ -1,10 +1,9 @@
-from flask import Flask, request, jsonify
+from pathlib import Path
+from flask import Flask, request, jsonify, render_template, url_for  # consolidate imports
 from flask_cors import CORS
 from ultralytics import YOLO
-import os
-import json
+import os, json, base64, uuid
 from datetime import datetime
-from flask import render_template
 from fridge_logic import get_possible_recipes
 
 # Initialize app
@@ -12,13 +11,20 @@ app = Flask(__name__)
 CORS(app)
 
 # === CONFIG ===
-FRIDGE_PATH = os.path.join("data", "fridges.json")
-IMAGE_FOLDER = os.path.join("backend", "images")
+BASE_DIR = Path(__file__).resolve().parent            # .../MealMaker/backend
+ROOT_DIR = BASE_DIR.parent                            # .../MealMaker
+
+FRIDGE_PATH = ROOT_DIR / "data" / "fridges.json"      # .../MealMaker/data/fridges.json
+IMAGE_FOLDER = BASE_DIR / "images"                    # .../MealMaker/backend/images  (non-web)
+WEIGHTS_PATH = ROOT_DIR / "yolov8n.pt"                # .../MealMaker/yolov8n.pt
+
 os.makedirs(IMAGE_FOLDER, exist_ok=True)
 
 # Load YOLOv8 model once
-model = YOLO("yolov8n.pt")  # Replace with food-trained model if needed
-
+model = YOLO(str(WEIGHTS_PATH))  #Trained to detect multiple items
+@app.route("/")
+def home():
+    return render_template("index.html")
 @app.route("/ai")
 def ai_page():
     return render_template("ai_fridge.html")
@@ -29,6 +35,10 @@ def index():
 @app.route("/edit")
 def edit_fridge():
     return render_template("edit_fridge.html")
+
+@app.route("/recipes")
+def recipes_page():
+    return render_template("recipes.html")
 
 # === ROUTE: Recipe Finder ===
 @app.route("/get_recipes", methods=["POST"])
@@ -128,6 +138,23 @@ def scan_image():
     except Exception as e:
         print("X Exception occurred:", str(e))
         return jsonify({"status": "error", "message": str(e)})
+    
+@app.route("/save_frame", methods=["POST"])
+def save_frame():
+    data = request.get_json(silent=True) or {}
+    img_b64 = data.get("imageData", "")
+    header, b64data = img_b64.split(",", 1) if "," in img_b64 else ("", img_b64)
+
+    img_bytes = base64.b64decode(b64data)
+    save_dir = os.path.join(app.static_folder, "images")
+    os.makedirs(save_dir, exist_ok=True)
+
+    fname = f"{uuid.uuid4().hex}.png"
+    fpath = os.path.join(save_dir, fname)
+    with open(fpath, "wb") as f:
+        f.write(img_bytes)
+
+    return jsonify({"ok": True, "url": url_for('static', filename=f'images/{fname}')})
 
 
 # === MAIN ===

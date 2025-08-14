@@ -25,14 +25,15 @@
     <button id="confirmBtn">Confirm & Scan</button>
   </div>
 
+   <!-- Back Button -->
+    <div class="back-link">
+        <a href="/">← Back to Fridges</a>
+    </div>
+
 
   <div id="scanResult">Waiting to scan results...</div>
 
-
-    <script>
-        console.log("✅ JS loaded and fridgeId =", fridgeId);
-        console.log("📸 confirmBtn:", confirmBtn);
-        
+     <script>
         const video = document.getElementById("cameraFeed");
         const canvas = document.getElementById("snapshotCanvas");
         const captureBtn = document.getElementById("captureBtn");
@@ -46,36 +47,30 @@
         const urlParams = new URLSearchParams(window.location.search);
         const fridgeId = urlParams.get("fridge") || "default";
 
-        // Start camera
+        console.log("✅ JS loaded and fridgeId =", fridgeId);
+        console.log("📸 confirmBtn:", confirmBtn);
+
         async function startCamera() {
             stream = await navigator.mediaDevices.getUserMedia({ video: true });
             video.srcObject = stream;
         }
-
-        // Stop camera
         function stopCamera() {
-            if (stream) {
-            const tracks = stream.getTracks();
-            tracks.forEach(track => track.stop());
+            if (!stream) return;
+            stream.getTracks().forEach(t => t.stop());
             video.srcObject = null;
-            }
         }
 
-        // Initial camera start
+        // Start
         startCamera();
 
-        // Capture button
+        // Capture → preview
         captureBtn.onclick = () => {
-            const ctx = canvas.getContext("2d");
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const w = video.videoWidth || 640;
+            const h = video.videoHeight || 480;
+            canvas.width = w; canvas.height = h;
+            canvas.getContext("2d").drawImage(video, 0, 0, w, h);
 
-            // Convert canvas to image preview
-            const imageDataURL = canvas.toDataURL("image/jpeg");
-            capturedImage.src = imageDataURL;
-
-            // Pause feed and show preview
+            capturedImage.src = canvas.toDataURL("image/jpeg");
             stopCamera();
             previewContainer.style.display = "block";
             captureBtn.style.display = "none";
@@ -88,33 +83,31 @@
             startCamera();
         };
 
-        // Confirm and Scan
-        confirmBtn.onclick = async () => {
-            console.log("🟢 Sending form data to /scan_image...");
-
+        // Confirm & Scan → POST /scan_image as multipart/form-data
+        confirmBtn.onclick = () => {
             canvas.toBlob(async (blob) => {
-                console.log("🧾 FormData:", [...formData]);
-                const formData = new FormData();
-                formData.append("photo", blob, "captured_frame.jpg");
-                formData.append("fridge_id", fridgeId);
+            const formData = new FormData();
+            formData.append("photo", blob, "captured_frame.jpg");
+            formData.append("fridge_id", fridgeId);
 
-            const res = await fetch("/scan_image", {
+            const res = await fetch(`${window.location.origin}/scan_image`, {
                 method: "POST",
                 body: formData
             });
 
-            const result = await res.json();
+            let result;
+            try { result = await res.json(); } catch { result = { status: "error" }; }
+
             if (result.status === "success") {
                 scanResult.innerText = "Detected and added to fridge: " + result.items.join(", ");
             } else {
                 scanResult.innerText = "Error: Unable to detect ingredients.";
             }
 
-            // Hide preview after submission
             previewContainer.style.display = "none";
             }, "image/jpeg");
         };
-    </script>
+     </script>
 
 </body>
 </html>

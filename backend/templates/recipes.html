@@ -6,7 +6,7 @@
     <title>Recipe Results - MealMaker</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
-<script src="recipes.js"></script>
+
 <body>
     <div class="background"></div>
 
@@ -23,9 +23,9 @@
 
     <!-- Back Button -->
     <div class="back-link">
-        <a href="index.html">← Back to Fridges</a>
+        <a href="/">← Back to Fridges</a>
     </div>
 
-    <script src="recipes.js"></script>
+    <script src="{{ url_for('static', filename='js/recipes.js') }}" defer></script>
 </body>
 </html>

@@ -30,22 +30,19 @@
         </ul>
 
 
-
         <!-- Add buttons -->
         <div class="controls">
             <button id="addItemBtn">+ Add Item</button>
-            <a href=ai_fridge.html>
-                <button id="addAIButton">+ Add with AI</button>
-            </a>
+            <button id="addAIButton">+ Add with AI</button>
         </div>
         
 
         <!-- Back button -->
         <div class="back-link">
-            <a href="index.html">← Back to Fridges</a>
+            <a href="/">← Back to Fridges</a>
         </div>
     </div>
 
-    <script src="script.js"></script>
+    <script src="{{ url_for('static', filename='js/script.js') }}" defer></script>
 </body>
 </html>

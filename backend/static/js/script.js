@@ -120,6 +120,10 @@ function setupEditPage() {
         renderItems();
     });
 
+    document.getElementById("addAIButton").addEventListener("click", () => {
+        window.location.href = `/ai?fridge=${slotIndex + 1}`;
+    });
+
     renderItems();
 }
 
@@ -194,14 +198,14 @@ function setupIndexPage() {
 
         // Populate text
         textEl.textContent =
-            itemCount === 0
+            itemCount === 1
                 ? `${fridge.name} - Empty`
                 : `${fridge.name} - ${itemCount} items`;
 
         // Clicking dots → Edit fridge
         menuEl.addEventListener("click", (e) => {
             e.stopPropagation(); // Prevent slot selection
-            window.location.href = `edit_fridge.html?slot=${index + 1}`;
+            window.location.href = `/edit?slot=${index + 1}`;
         });
 
         // Clicking slot → Toggle selection
@@ -235,7 +239,7 @@ function setupIndexPage() {
         localStorage.setItem("preferences", JSON.stringify(preferences));
 
         // Redirect to recipes page
-        window.location.href = "recipes.html";
+        window.location.href = "/recipes";
     });
 }
 
