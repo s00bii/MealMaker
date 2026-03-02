@@ -1,80 +1,74 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <!-- Character encoding and viewport for responsive design -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- Page title displayed in browser tab -->
     <title>MealMaker</title>
+    
+    <!-- Link to main stylesheet -->
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    
+    <!-- Link to main JavaScript file for fridge management -->
     <script src="{{ url_for('static', filename='js/script.js') }}" defer></script>
 </head>
 <body>
-    <!-- Background -->
+    <!-- Fullscreen background image -->
     <div class="background"></div>
 
-    <!-- Title -->
+    <!-- Application title and branding -->
     <div class = "title">
         <h1>MealMaker</h1>
         <h3>By Subi</h3>
     </div>
 
-    <!-- Overlay container -->
+    <!-- Main overlay container with fridge panel, preferences, and AI banner -->
     <div class="overlay">
-        <!-- Left fridge slots panel -->
+        <!-- LEFT PANEL: Display fridge slots for selection -->
         <div class="fridge-panel">
-        <h2>Your Fridges</h2>
-        <a class="slot" href="{{ url_for('edit_fridge') }}?slot=1">
-            <span class="slot-text"></span>
-            <span class="slot-menu">⋮</span>
-        </a>
-        <a class="slot" href="{{ url_for('edit_fridge') }}?slot=2">
-            <span class="slot-text"></span>
-            <span class="slot-menu">⋮</span>
-        </a>
-        <a class="slot" href="{{ url_for('edit_fridge') }}?slot=3">
-            <span class="slot-text"></span>
-            <span class="slot-menu">⋮</span>
-        </a>
-        <a class="slot" href="{{ url_for('edit_fridge') }}?slot=4">
-            <span class="slot-text"></span>
-            <span class="slot-menu">⋮</span>
-        </a>
-        <a class="slot" href="{{ url_for('edit_fridge') }}?slot=5">
-            <span class="slot-text"></span>
-            <span class="slot-menu">⋮</span>
-        </a>
+            <h2>Your Fridges</h2>
+            <!-- Fridge slots will be dynamically rendered here -->
+            <div id="fridgeSlots"></div>
+            <!-- Button to add new fridge -->
+            <button id="addFridgeBtn" class="add-fridge-btn">+ Add Fridge</button>
+        </div>
+
+        <!-- RIGHT COLUMN: stack Get Recipes, Preferences, and AI banner vertically -->
+        <div class="right-column">
+            <!-- CENTER: Get Recipes button (enabled only when fridges selected) -->
+            <div class="get-recipes-container">
+                <button id="getRecipesBtn" disabled>Get Recipes</button>
+            </div>
+
+            <!-- User preference filters for recipe matching -->
+            <div class="preferences">
+                <h3>Recipe Preferences</h3>
+                <!-- Minimum calorie filter -->
+                <label>
+                    Min Calories:
+                    <input type="number" id="calorieMin" value="200">
+                </label>
+                <!-- Maximum calorie filter -->
+                <label>
+                    Max Calories:
+                    <input type="number" id="calorieMax" value="1000">
+                </label>
+                <!-- Minimum protein requirement filter -->
+                <label>
+                    Min Protein (g):
+                    <input type="number" id="proteinMin" value="10">
+                </label>
+            </div>
+
+            <!-- RIGHT PANEL: Banner for AI ingredient scanner feature
+            <div class="ai-banner">
+                <h3>Select a Fridge to Add with AI</h3>
+            </div>
+            -->
+        </div>
     </div>
-
-
-        
-    <!-- Get Recipes Button -->
-    <div class="get-recipes-container">
-        <button id="getRecipesBtn" disabled>Get Recipes</button>
-    </div>
-    
-    <!-- Preferences Section -->
-    <div class="preferences">
-        <h3>Recipe Preferences</h3>
-        <label>
-            Min Calories:
-            <input type="number" id="calorieMin" value="200">
-        </label>
-        <label>
-            Max Calories:
-            <input type="number" id="calorieMax" value="1000">
-        </label>
-        <label>
-            Min Protein (g):
-            <input type="number" id="proteinMin" value="10">
-        </label>
-    </div>
-
-
-
-    <!-- AI feature rectangle -->
-    <div class="ai-banner">
-        <h3>Select a Fridge to Add with AI</h3>
-    </div>
- </div>
 
 </body>
 </html>

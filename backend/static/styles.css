@@ -4,6 +4,7 @@ body, html {
     padding: 0;
     height: 100%;
     font-family: Arial, sans-serif;
+    overflow: hidden; /* Prevent page scroll on desktop fullscreen */
 }
 
 .background {
@@ -33,6 +34,7 @@ body, html {
 .title h1 {
     margin: 0;
     font-size: 2em;
+    color: #fae9cf;
 }
 
 .title h3 {
@@ -46,29 +48,48 @@ body, html {
 .overlay {
     display: flex;
     justify-content: space-between;
-    height: 100%;
+    align-items: center;
     width: 100%;
-    padding: 2%;
+    height: calc(100vh - 140px); /* full available space under banner */
+    margin-top: 110px; /* push overlay below banner */
+    padding: 2% 4% 4% 4%;
     box-sizing: border-box;
+    gap: 24px;
+}
+
+.right-column {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    align-items: center;
+    justify-content: flex-start;
+    flex: 0 0 58%;
+}
+
+.right-column > * {
+    width: 85%;
+    max-width: 520px;
 }
 
 /* LEFT PANEL - Fridge Slots */
 .fridge-panel {
-    width: 30%;
-    background-color: rgba(0, 0, 0, 0.6); /* Semi-transparent */
+    flex: 0 0 38%;
+    background-color: rgba(0, 0, 0, 0.35); /* lighter panel */
     padding: 20px;
     border-radius: 8px;
     display: flex;
     flex-direction: column;
     gap: 10px;
     color: #4caf50; /* Green heading */
+    height: 100%;
+    overflow: auto;
 }
 
 .fridge-name:focus {
     outline: none;
     background-color: rgba(76, 175, 80, 0.2);
     border-radius: 5px;
-    transition: background 0.2s ease;
+    transition: background-color 0.2s ease;
 }
 
 .fridge-panel h2 {
@@ -76,19 +97,39 @@ body, html {
     color: #4caf50;
 }
 
+.add-fridge-btn {
+    padding: 12px 15px;
+    background: rgba(76, 175, 80, 0.2);
+    color: #4caf50;
+    border: 2px dashed #4caf50;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+    transition: all 0.2s ease;
+    width: 100%;
+    box-sizing: border-box;
+    margin-top: 10px;
+}
+
+.add-fridge-btn:hover {
+    background: rgba(76, 175, 80, 0.3);
+    border-color: #45a049;
+    color: #45a049;
+}
+
 /* Individual fridge slots */
 .slot {
-    display: flex; /* Change from block to flex for text + dots */
+    display: flex;
     justify-content: space-between;
     align-items: center;
     text-decoration: none;
     background: rgba(255, 255, 255, 0.1);
     padding: 15px;
-    border-radius: 8px;
     color: #fff;
     border: 1px solid #4caf50;
-    transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
-    height: 20%;
+    transition: transform 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+    min-height: 56px;
     cursor: pointer;
 }
 
@@ -101,14 +142,13 @@ body, html {
 .slot.selected {
     background-color: rgba(76, 175, 80, 0.3);
     border: 2px solid #4caf50;
+    font-size: 20px;
+    padding-left: 8px;
 }
 
-/* Three dots menu */
 .slot-menu {
-    position: relative;
-    bottom: 45%;
-    left: 0.7%;
-    font-size: 30px;
+    margin-left: 12px;
+    font-size: 24px;
     cursor: pointer;
     padding-left: 10px;
     user-select: none;
@@ -117,30 +157,102 @@ body, html {
 
 .slot-menu:hover {
     color: #ff9800; /* Orange hover */
+    transition: color 0.2s ease;
+}
+
+/* Slot wrapper for context menu positioning */
+.slot-wrapper {
+    position: relative;
+}
+
+/* Context menu for slot actions */
+.slot-context-menu {
+    display: none;
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background: rgba(0, 0, 0, 0.9);
+    border: 1px solid #4caf50;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    z-index: 100;
+    min-width: 120px;
+    margin-top: 5px;
+    overflow: hidden;
+}
+
+.slot-context-menu.active {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Context menu options */
+.context-option {
+    padding: 10px 15px;
+    border: none;
+    background: transparent;
+    color: #fff;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.2s ease, color 0.2s ease;
+    text-align: left;
+}
+
+.context-option:hover {
+    background-color: rgba(76, 175, 80, 0.2);
+}
+
+.context-option.edit-option:hover {
+    color: #4caf50;
+}
+
+.context-option.delete-option {
+    color: #ff6b6b;
+}
+
+.context-option.delete-option:hover {
+    background-color: rgba(255, 107, 107, 0.2);
+    color: #ff9999;
 }
 
 
-
-/* AI Banner on right side (like "NEW GAME+" rectangle) */
+/* AI Banner on right side (like "NEW GAME+" rectangle) 
 .ai-banner {
-    align-self: flex-end;
-    width: 30%;
-    background: rgba(255, 152, 0, 0.8); /* Orange translucent */
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 28%;
+    background: rgba(255, 152, 0, 0.9); /* Orange translucent 
     padding: 15px;
     border-radius: 8px;
     text-align: center;
     color: #fff;
+    align-self: center;
 }
-
+*/
 .ai-banner button {
     margin-top: 10px;
     padding: 8px 15px;
     font-size: 14px;
     border: none;
-    border-radius: 5px;
-    background: #666;
+    background: #4caf50;
     color: #fff;
-    cursor: not-allowed;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: background-color 0.2s ease;
+}
+
+.ai-banner button:hover {
+    background-color: #45a049;
+}
+
+@media screen and (max-width: 1024px) {
+    .ai-banner button {
+        background: #666;
+        color: #fff;
+        cursor: not-allowed;
+    }
 }
 
 /* Responsive adjustments */
@@ -194,7 +306,7 @@ body, html {
     border-radius: 5px;
     margin-bottom: 10px;
     gap: 10px;
-    transition: background 0.2s ease, transform 0.2s ease;
+    transition: background-color 0.2s ease, transform 0.2s ease;
 }
 
 .item:hover {
@@ -223,11 +335,14 @@ body, html {
     padding: 15px;
     border-radius: 8px;
     border: 1px solid #4caf50;
-    transition: background 0.2s ease;
+    transition: background-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+    cursor: pointer;
 }
 
 .recipe-card:hover {
-    background: rgba(76, 175, 80, 0.2);
+    background-color: rgba(76, 175, 80, 0.2);
+    transform: translateY(-4px);
+    box-shadow: 0px 6px 15px rgba(76, 175, 80, 0.3);
 }
 
 .recipe-title {
@@ -254,37 +369,54 @@ body, html {
 }
 
 .preferences {
-    position: absolute;
-    bottom: 23.5%; /* Below Get Recipes button */
-    left: 83%;
-    transform: translateX(-50%);
+    /* place preferences in the right column instead of absolute overlay */
+    flex: 0 0 28%;
+    position: relative;
     text-align: center;
-    background: rgba(0, 0, 0, 0.6);
-    padding: 15px;
-    border-radius: 10px;
+    background: rgba(0, 0, 0, 0.35);
+    padding: 20px;
+    border-radius: 8px;
     color: #fff;
-    width: 40%;
-    max-width: 400px;
+    max-width: 360px;
+    border: 1px solid rgba(76, 175, 80, 0.3);
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.3);
 }
 
 .preferences h3 {
-    margin-bottom: 10px;
+    margin-bottom: 15px;
+    margin-top: 0;
     color: #ff9800;
+    font-size: 1.1em;
+    text-transform: uppercase;
+    letter-spacing: 1px;
 }
 
 .preferences label {
-    display: block;
-    margin: 8px 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 12px 0;
     font-size: 14px;
+    gap: 8px;
 }
 
 .preferences input {
     width: 80px;
-    padding: 5px;
+    padding: 8px 10px;
     margin-left: 5px;
     border-radius: 5px;
-    border: none;
+    border: 1px solid rgba(76, 175, 80, 0.5);
     text-align: center;
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.preferences input:focus {
+    outline: none;
+    background-color: rgba(76, 175, 80, 0.2);
+    border-color: #4caf50;
+    box-shadow: 0 0 5px rgba(76, 175, 80, 0.3);
 }
 
 /* Delete button */
@@ -336,15 +468,18 @@ body, html {
     text-decoration: none;
     color: #ff9800;
 }
-
+/* 
 .get-recipes-container {
-    position: absolute;
-    top: 50%;
-    left: 83%;
-    transform: translateX(-50%);
-    text-align: center;
+    flex: 0 0 20%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(0, 0, 0, 0.35);
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid rgba(76, 175, 80, 0.3);
 }
-
+*/
 #getRecipesBtn {
     padding: 15px 30px;
     font-size: 20px;
@@ -353,16 +488,19 @@ body, html {
     background-color: #555; /* Grey when disabled */
     color: #fff;
     cursor: not-allowed;
-    transition: background 0.3s ease;
+    transition: background 0.3s ease, box-shadow 0.3s ease;
 }
 
 #getRecipesBtn.enabled {
     background-color: #4caf50; /* Green when enabled */
     cursor: pointer;
+    box-shadow: 0px 4px 10px rgba(76, 175, 80, 0.3);
 }
 
 #getRecipesBtn.enabled:hover {
     background-color: #45a049;
+    box-shadow: 0px 6px 15px rgba(76, 175, 80, 0.5);
+    transform: translateY(-2px);
 }
 
 /* Ai HTML */
@@ -414,22 +552,30 @@ position: relative;
   padding: 1rem;
   background-color: rgba(0, 0, 0, 0.6);
   border-radius: 6px;
-  max-width: 500px;
+  max-width: 600px;
   margin-left: auto;
   margin-right: auto;
   color: #fff;
   font-weight: bold;
   box-shadow: 0 0 5px rgba(76, 175, 80, 0.3);
+  min-height: 100px;
+  display: block;
 }
 
 #scanResult.as-embed {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  background: transparent;   /* no dark overlay */
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.7);
   z-index: 10;
-  pointer-events: none;       /* let clicks pass EXCEPT on the card */
+  pointer-events: none;
+  padding: 20px;
+  overflow-y: auto;
 }
 
 #previewContainer button {

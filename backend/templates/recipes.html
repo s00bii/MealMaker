@@ -1,31 +1,38 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <!-- Character encoding and viewport for responsive design -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- Page title displayed in browser tab -->
     <title>Recipe Results - MealMaker</title>
+    
+    <!-- Link to main stylesheet -->
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 
 <body>
+    <!-- Fullscreen background image -->
     <div class="background"></div>
 
-    <!-- Title -->
+    <!-- Page title and subtitle -->
     <div class="title">
         <h1>Recipe Results</h1>
         <h3>Based on Your Fridge</h3>
     </div>
 
-    <!-- Recipe Container -->
+    <!-- Container for displaying recipe cards (populated by JavaScript) -->
     <div class="recipes-container" id="recipesContainer">
         <p>Loading recipes...</p>
     </div>
 
-    <!-- Back Button -->
+    <!-- Back button to return to home page -->
     <div class="back-link">
         <a href="/">← Back to Fridges</a>
     </div>
 
+    <!-- Load recipes display script -->
     <script src="{{ url_for('static', filename='js/recipes.js') }}" defer></script>
 </body>
 </html>

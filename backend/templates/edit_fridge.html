@@ -1,22 +1,28 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <!-- Character encoding and viewport for responsive design -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- Page title -->
     <title>Edit Fridge</title>
+    
+    <!-- Link to main stylesheet -->
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
+    <!-- Fullscreen background image -->
     <div class="background"></div>
 
-
+    <!-- Main fridge editing container -->
     <div class="edit-fridge-container">
-        <!-- Editable fridge name -->
+        <!-- Editable fridge name (click to rename) -->
         <h2 contenteditable="true" class="fridge-name">Fridge One</h2>
 
-
-        <!-- Item list -->
+        <!-- List of items in the fridge -->
         <ul class="item-list" id="itemList">
+            <!-- Sample items (will be replaced by JavaScript) -->
             <li class="item">
                 <span class="item-name" contenteditable="true">Milk</span>
                 <span class="item-qty" contenteditable="true">1000 ml</span>
@@ -29,20 +35,19 @@
             </li>
         </ul>
 
-
-        <!-- Add buttons -->
+        <!-- Control buttons for adding items -->
         <div class="controls">
+            <!-- Add item manually -->
             <button id="addItemBtn">+ Add Item</button>
-            <button id="addAIButton">+ Add with AI</button>
         </div>
         
-
-        <!-- Back button -->
+        <!-- Back button to return to home page -->
         <div class="back-link">
             <a href="/">← Back to Fridges</a>
         </div>
     </div>
 
+    <!-- Load main application script for fridge management -->
     <script src="{{ url_for('static', filename='js/script.js') }}" defer></script>
 </body>
 </html>
