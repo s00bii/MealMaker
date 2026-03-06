@@ -1,74 +1,61 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <!-- Character encoding and viewport for responsive design -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    
-    <!-- Page title displayed in browser tab -->
     <title>MealMaker</title>
-    
-    <!-- Link to main stylesheet -->
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-    
-    <!-- Link to main JavaScript file for fridge management -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="{{ url_for('static', filename='js/auth.js') }}"></script>
     <script src="{{ url_for('static', filename='js/script.js') }}" defer></script>
 </head>
 <body>
-    <!-- Fullscreen background image -->
+    <div id="loadingOverlay" class="loading-overlay">Loading…</div>
     <div class="background"></div>
 
-    <!-- Application title and branding -->
-    <div class = "title">
+    <div class="title">
         <h1>MealMaker</h1>
         <h3>By Subi</h3>
     </div>
 
-    <!-- Main overlay container with fridge panel, preferences, and AI banner -->
+    <button id="logoutBtn" class="logout-btn" onclick="logout()">Logout</button>
+
+    
+
     <div class="overlay">
-        <!-- LEFT PANEL: Display fridge slots for selection -->
         <div class="fridge-panel">
             <h2>Your Fridges</h2>
-            <!-- Fridge slots will be dynamically rendered here -->
             <div id="fridgeSlots"></div>
-            <!-- Button to add new fridge -->
             <button id="addFridgeBtn" class="add-fridge-btn">+ Add Fridge</button>
         </div>
 
-        <!-- RIGHT COLUMN: stack Get Recipes, Preferences, and AI banner vertically -->
         <div class="right-column">
-            <!-- CENTER: Get Recipes button (enabled only when fridges selected) -->
             <div class="get-recipes-container">
                 <button id="getRecipesBtn" disabled>Get Recipes</button>
             </div>
 
-            <!-- User preference filters for recipe matching -->
             <div class="preferences">
                 <h3>Recipe Preferences</h3>
-                <!-- Minimum calorie filter -->
                 <label>
                     Min Calories:
                     <input type="number" id="calorieMin" value="200">
                 </label>
-                <!-- Maximum calorie filter -->
                 <label>
                     Max Calories:
                     <input type="number" id="calorieMax" value="1000">
                 </label>
-                <!-- Minimum protein requirement filter -->
                 <label>
                     Min Protein (g):
                     <input type="number" id="proteinMin" value="10">
                 </label>
             </div>
-
-            <!-- RIGHT PANEL: Banner for AI ingredient scanner feature
-            <div class="ai-banner">
-                <h3>Select a Fridge to Add with AI</h3>
-            </div>
-            -->
         </div>
     </div>
 
+    <script>
+        document.addEventListener("DOMContentLoaded", async () => {
+            await requireLogin();
+        });
+    </script>
 </body>
 </html>

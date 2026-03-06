@@ -1,3 +1,19 @@
+/* Loading overlay (hidden by default via inline style) */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.6);
+    color: #fff;
+    font-size: 2rem;
+    z-index: 2000;
+}
+
 /* Fullscreen background */
 body, html {
     margin: 0;
@@ -23,12 +39,34 @@ body, html {
 .title {
     position: absolute;
     background-color: rgba(0, 0, 0, 0.6); /* Semi-transparent */
-    padding: 10px;
+    padding: 10px 20px;
     border-radius: 8px;
     top: 20px;
     right: 30px;
     text-align: right;
     color: #ff9800; /* Orange accent */
+}
+
+
+
+/* Logout button styles */
+.logout-btn {
+    position: fixed;
+    top: 20px;
+    left: 30px;
+    padding: 10px 20px;
+    font-size: 14px;
+    background-color: #fff;
+    color: #333;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    z-index: 1000;
+}
+
+.logout-btn:hover,
+#logoutBtn:hover {
+    background-color: #f0f0f0;
 }
 
 .title h1 {
@@ -74,13 +112,14 @@ body, html {
 /* LEFT PANEL - Fridge Slots */
 .fridge-panel {
     flex: 0 0 38%;
-    background-color: rgba(0, 0, 0, 0.35); /* lighter panel */
+    /* darker background for better contrast */
+    background-color: rgba(0, 0, 0, 0.55);
     padding: 20px;
     border-radius: 8px;
     display: flex;
     flex-direction: column;
     gap: 10px;
-    color: #4caf50; /* Green heading */
+    color: #b185b3; /* Green heading */
     height: 100%;
     overflow: auto;
 }
@@ -373,7 +412,7 @@ body, html {
     flex: 0 0 28%;
     position: relative;
     text-align: center;
-    background: rgba(0, 0, 0, 0.35);
+    background: rgba(0, 0, 0, 0.55);
     padding: 20px;
     border-radius: 8px;
     color: #fff;
@@ -468,6 +507,47 @@ body, html {
     text-decoration: none;
     color: #ff9800;
 }
+
+/* Ingredient measurement legend */
+.ingredient-legend {
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid #4caf50;
+    border-radius: 8px;
+    padding: 15px 20px;
+    margin-top: 20px;
+    color: #e0e0e0;
+    font-size: 13px;
+}
+
+.ingredient-legend h4 {
+    margin: 0 0 10px;
+    color: #4caf50;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.ingredient-legend ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.ingredient-legend li {
+    padding: 4px 0;
+    border-bottom: 1px solid rgba(76, 175, 80, 0.2);
+}
+
+.ingredient-legend li:last-child {
+    border-bottom: none;
+}
+
+.ingredient-legend strong {
+    color: #ff9800;
+}
+
 /* 
 .get-recipes-container {
     flex: 0 0 20%;

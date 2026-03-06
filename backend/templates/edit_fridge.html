@@ -10,8 +10,13 @@
     
     <!-- Link to main stylesheet -->
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="{{ url_for('static', filename='js/auth.js') }}"></script>
 </head>
 <body>
+    <button id="logoutBtn" class="logout-btn" onclick="logout()">Logout</button>
+
+    <div id="loadingOverlay" class="loading-overlay">Loading…</div>
     <!-- Fullscreen background image -->
     <div class="background"></div>
 
@@ -19,6 +24,7 @@
     <div class="edit-fridge-container">
         <!-- Editable fridge name (click to rename) -->
         <h2 contenteditable="true" class="fridge-name">Fridge One</h2>
+        <button id="logoutBtn" style="position: absolute; top: 20px; right: 20px; padding: 10px 20px; cursor: pointer;">Logout</button>
 
         <!-- List of items in the fridge -->
         <ul class="item-list" id="itemList">
@@ -44,6 +50,16 @@
         <!-- Back button to return to home page -->
         <div class="back-link">
             <a href="/">← Back to Fridges</a>
+        </div>
+
+        <!-- Measurement unit legend -->
+        <div class="ingredient-legend">
+            <h4>Measurement Guide</h4>
+            <ul>
+                <li><strong>Liquids:</strong> ml</li>
+                <li><strong>Solids:</strong> g</li>
+                <li><strong>Countable:</strong> pcs</li>
+            </ul>
         </div>
     </div>
 

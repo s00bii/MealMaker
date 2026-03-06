@@ -7,33 +7,36 @@
 // === UTILITY FUNCTIONS ===
 
 /**
- * Initialize fridges in localStorage if they don't exist.
- * Creates 3 default fridge slots with empty inventories.
+ * Fetch all fridge items from the API.
+ * @returns {Promise<Array>} Array of fridge items from API
  */
-function initializeFridges() {
-    if (!localStorage.getItem("fridges")) {
-        const defaultFridges = Array.from({ length: 3 }, (_, i) => ({
-            name: `Fridge Slot ${i + 1}`,
-            items: {}
-        }));
-        localStorage.setItem("fridges", JSON.stringify(defaultFridges));
+// === DATA ACCESS ===
+
+/**
+ * Fetch all fridge records from the backend.
+ * Each record represents a single fridge row with an `items` JSON object.
+ * @returns {Promise<Array>} Array of fridge objects from API
+ */
+async function getFridges() {
+    try {
+        const response = await apiFetch("/api/fridge", { method: "GET" });
+        if (!response.ok) throw new Error("Failed to fetch fridges");
+        return await response.json();
+    } catch (e) {
+        console.error("Error fetching fridges:", e);
+        return [];
     }
 }
 
 /**
- * Retrieve all fridges from localStorage.
- * @returns {Array} Array of fridge objects with name and items
+ * Save fridges by calling the API.
+ * For new fridges: POST to /api/fridge
+ * For updates: PUT to /api/fridge/<id>
+ * @param {Array} fridges - Fridges to save
  */
-function getFridges() {
-    return JSON.parse(localStorage.getItem("fridges"));
-}
-
-/**
- * Save all fridges to localStorage.
- * @param {Array} fridges - Array of fridge objects to persist
- */
-function saveFridges(fridges) {
-    localStorage.setItem("fridges", JSON.stringify(fridges));
+async function saveFridges(fridges) {
+    // This is now handled by individual API calls in the UI logic
+    // POST for new fridges, PUT for updates
 }
 
 // ------------------------------------
@@ -44,143 +47,191 @@ function saveFridges(fridges) {
  * Setup and initialize the edit fridge page.
  * Allows users to manually add/edit/delete items in a specific fridge.
  */
-function setupEditPage() {
-    initializeFridges();
+async function setupEditPage() {
+    // show loading overlay
+    const loading = document.getElementById("loadingOverlay");
+    if (loading) loading.style.display = "flex";
 
-    // Get fridge index from URL parameter (?slot=1)
+    // Ensure user is logged in
+    await requireLogin();
+
+    // Get fridge name from URL parameter
     const urlParams = new URLSearchParams(window.location.search);
-    const slotIndex = parseInt(urlParams.get("slot")) - 1;
+    let fridgeName = urlParams.get("fridge");
 
-    const fridges = getFridges();
-    const fridge = fridges[slotIndex];
+    // Fetch all fridges and find the one we are editing
+    const fridges = await getFridges();
+    let fridge = fridges.find(f => f.name === fridgeName);
+    if (!fridge) {
+        console.error("Fridge not found", fridgeName);
+        // hide loading even if error
+        if (loading) loading.style.display = "none";
+        return;
+    }
+    // if a placeholder default row exists, treat as empty (shouldn't normally happen)
+    if (fridge.name === "Default") {
+        fridge.items = {};
+    }
 
     const fridgeNameEl = document.querySelector(".fridge-name");
     const itemList = document.getElementById("itemList");
     const addItemBtn = document.getElementById("addItemBtn");
 
-    // Display fridge name
-    fridgeNameEl.textContent = fridge.name;
+    fridgeNameEl.textContent = fridgeName || "Fridge";
 
-    // Save fridge name when edited
-    fridgeNameEl.addEventListener("blur", () => {
-        fridge.name = fridgeNameEl.textContent.trim();
-        saveFridges(fridges);
+    // enable renaming and persist it
+    fridgeNameEl.addEventListener("blur", async () => {
+        const newName = fridgeNameEl.textContent.trim();
+        if (newName && newName !== fridge.name) {
+            fridge.name = newName;
+            try {
+                await apiFetch(`/api/fridge/${fridge.id}`, {
+                    method: "PUT",
+                    body: JSON.stringify({ name: newName })
+                });
+                // update URL so reload will work
+                const params = new URLSearchParams(window.location.search);
+                params.set("fridge", newName);
+                window.history.replaceState({}, "", `/edit?${params.toString()}`);
+                fridgeName = newName;
+            } catch (e) {
+                console.error("Error renaming fridge", e);
+            }
+        }
     });
+
+    // convert JSON-object items into array for editing
+    let fridgeItems = [];
+    if (fridge.items && typeof fridge.items === "object") {
+        for (const [iname, iqty] of Object.entries(fridge.items)) {
+            fridgeItems.push({ name: iname, quantity: iqty, unit: "" });
+        }
+    }
+
+    function itemsToJson() {
+        const obj = {};
+        fridgeItems.forEach(it => {
+            if (it.name) obj[it.name] = it.quantity;
+        });
+        return obj;
+    }
+
+    /**
+     * Sort items by quantity (highest first).
+     * Extracts numeric value and sorts descending.
+     */
+    function sortByQuantity() {
+        fridgeItems.sort((a, b) => {
+            const qtyA = parseFloat(a.quantity) || 0;
+            const qtyB = parseFloat(b.quantity) || 0;
+            return qtyB - qtyA; // descending (most to least)
+        });
+    }
 
     /**
      * Render all items in the fridge to the UI.
      */
     function renderItems() {
+        sortByQuantity(); // sort before rendering
         itemList.innerHTML = "";
-
-        // Create list item for each inventory entry
-        for (const [name, qty] of Object.entries(fridge.items)) {
+        fridgeItems.forEach((item, idx) => {
             const li = document.createElement("li");
             li.classList.add("item");
-            li.dataset.origName = name;
+            li.dataset.index = idx;
             li.innerHTML = `
-                <span class="item-name" contenteditable="true">${name}</span>
-                <span class="item-qty" contenteditable="true">${qty}</span>
+                <span class="item-name" contenteditable="true">${item.name}</span>
+                <span class="item-qty" contenteditable="true">${item.quantity}</span>
                 <button class="delete-btn">×</button>
             `;
-
-            attachItemHandlers(li);
+            attachItemHandlers(li, item, idx);
             itemList.appendChild(li);
-        }
-    }
-
-    /**
-     * Attach event handlers to item edit/delete controls.
-     * @param {Element} li - The list item element
-     * @param {string} originalName - The original ingredient name
-     */
-    function attachItemHandlers(li) {
-        const nameEl = li.querySelector(".item-name");
-        const qtyEl = li.querySelector(".item-qty");
-        const deleteBtn = li.querySelector(".delete-btn");
-        let originalName = li.dataset.origName;
-
-        /**
-         * Save item changes on blur (when user stops editing).
-         */
-        function saveItem() {
-            const newName = nameEl.textContent.trim();
-            const newQty = qtyEl.textContent.trim();
-
-            // Remove old entry if name changed
-            if (originalName !== newName) {
-                delete fridge.items[originalName];
-                originalName = newName;
-                li.dataset.origName = newName;
-            }
-            fridge.items[newName] = newQty;
-
-            saveFridges(fridges);
-        }
-
-        // Save on blur for both name and quantity
-        nameEl.addEventListener("blur", saveItem);
-        qtyEl.addEventListener("blur", saveItem);
-
-        // Delete item when × button clicked
-        deleteBtn.addEventListener("click", () => {
-            delete fridge.items[originalName];
-            saveFridges(fridges);
-            renderItems();
         });
     }
 
-    // Add new item button handler (generate unique placeholder name)
-    addItemBtn.addEventListener("click", () => {
-        let base = "New Item";
-        let idx = 1;
-        let key = base;
-        while (fridge.items.hasOwnProperty(key)) {
-            idx += 1;
-            key = `${base} ${idx}`;
+    function attachItemHandlers(li, item, idx) {
+        const nameEl = li.querySelector(".item-name");
+        const qtyEl = li.querySelector(".item-qty");
+        const deleteBtn = li.querySelector(".delete-btn");
+
+        async function persistChanges() {
+            try {
+                // patch the fridge row with updated items JSON
+                await apiFetch(`/api/fridge/${fridge.id}`, {
+                    method: "PUT",
+                    body: JSON.stringify({ items: itemsToJson() })
+                });
+            } catch (e) {
+                console.error("Error updating fridge items", e);
+            }
         }
-        fridge.items[key] = "0";
-        saveFridges(fridges);
+
+        nameEl.addEventListener("blur", () => {
+            item.name = nameEl.textContent.trim();
+            persistChanges();
+        });
+        qtyEl.addEventListener("blur", () => {
+            item.quantity = qtyEl.textContent.trim();
+            persistChanges();
+        });
+
+        deleteBtn.addEventListener("click", async () => {
+            fridgeItems.splice(idx, 1);
+            renderItems();
+            await persistChanges();
+        });
+    }
+
+    addItemBtn.addEventListener("click", async () => {
+        fridgeItems.push({ name: "New Item", quantity: "0", unit: "" });
         renderItems();
+        try {
+            await apiFetch(`/api/fridge/${fridge.id}`, {
+                method: "PUT",
+                body: JSON.stringify({ items: itemsToJson() })
+            });
+        } catch (e) {
+            console.error("Error adding item to fridge", e);
+        }
     });
 
-    // Render initial items
     renderItems();
+    if (loading) loading.style.display = "none";
 }
 
 // === RECIPE SELECTION LOGIC ===
 
 /**
- * Merge contents of multiple fridges into a single combined inventory.
- * Adds quantities of duplicate items and sorts alphabetically.
+ * Merge contents of multiple items into a single combined inventory.
+ * Used for recipe matching when multiple fridges are selected.
  * 
- * @param {Array<number>} indices - Array of fridge slot indices to merge
- * @returns {Object} Merged and sorted inventory dictionary
+ * @param {Array<Object>} items - Array of item objects to merge
+ * @returns {Object} Merged inventory dictionary
  */
-function mergeSelectedFridges(indices) {
-    const fridges = getFridges();
+function mergeItems(items) {
     let merged = {};
 
-    // Merge contents of all selected fridges
-    indices.forEach(i => {
-        const items = fridges[i].items;
-        for (const [name, qty] of Object.entries(items)) {
-            if (!merged[name]) {
-                merged[name] = qty;
-            } else {
-                // Add quantities if item exists in multiple fridges
-                const num1 = parseFloat(merged[name]) || 0;
+    items.forEach(item => {
+        // Handle both array format {name, quantity} and object format {ingredient: qty}
+        if (item.name) {
+            // API format: {name, quantity}
+            const key = item.name.toLowerCase();
+            const num1 = parseFloat(merged[key]) || 0;
+            const num2 = parseFloat(item.quantity) || 0;
+            merged[key] = (num1 + num2).toString();
+        } else {
+            // Object format: {"Bread": "10", "Egg": "3"}
+            Object.entries(item).forEach(([name, qty]) => {
+                const key = name.toLowerCase();
+                const num1 = parseFloat(merged[key]) || 0;
                 const num2 = parseFloat(qty) || 0;
-                merged[name] = (num1 + num2).toString();
-            }
+                merged[key] = (num1 + num2).toString();
+            });
         }
     });
 
-    // Sort keys alphabetically for consistent display
     const sortedKeys = quickSort(Object.keys(merged));
     let sortedMerged = {};
     sortedKeys.forEach(key => (sortedMerged[key] = merged[key]));
-
     return sortedMerged;
 }
 
@@ -213,21 +264,29 @@ function quickSort(arr) {
  * Setup the index page with fridge selection and recipe filtering.
  * Handles fridge slot selection, recipe preference inputs, and navigation.
  */
-function setupIndexPage() {
-    initializeFridges();
-    const fridges = getFridges();
+async function setupIndexPage() {
+    // Ensure user is logged in first
+    await requireLogin();
+    
     const fridgeSlotsContainer = document.getElementById("fridgeSlots");
     const addFridgeBtn = document.getElementById("addFridgeBtn");
     const getRecipesBtn = document.getElementById("getRecipesBtn");
+    // hide container until we have real data to avoid flicker
+    fridgeSlotsContainer.style.visibility = "hidden";
 
-    let selectedIndices = new Set(); // Track which fridges are selected
+    // Fetch all fridges for the user and sort by slot_index
+    let fridgesList = await getFridges();
+    // drop any leftover default placeholder
+    fridgesList = fridgesList.filter(f => f.name !== "Default");
+    fridgesList.sort((a, b) => (a.slot_index || 0) - (b.slot_index || 0));
+
+    let selectedFridges = new Set(); // store names of selected fridges
 
     /**
      * Update the "Get Recipes" button state based on selection.
-     * Button is only enabled when at least one fridge is selected.
      */
     function updateButtonState() {
-        if (selectedIndices.size > 0) {
+        if (selectedFridges.size > 0) {
             getRecipesBtn.disabled = false;
             getRecipesBtn.classList.add("enabled");
         } else {
@@ -237,33 +296,31 @@ function setupIndexPage() {
     }
 
     /**
-     * Dynamically render all fridge slots based on current data.
+     * Render fridge slots based on the current fridgesList.
      */
     function renderSlots() {
         fridgeSlotsContainer.innerHTML = "";
-        
-        fridges.forEach((fridge, index) => {
-            const itemCount = Object.keys(fridge.items).length;
-            
-            // Create slot container
+
+        fridgesList.forEach((fridge, index) => {
+            const itemCount = fridge.items ? Object.keys(fridge.items).length : 0;
+
             const slotWrapper = document.createElement("div");
             slotWrapper.classList.add("slot-wrapper");
-            
-            // Create slot element
+
             const slot = document.createElement("a");
             slot.classList.add("slot");
             slot.href = `#`;
-            
+
             const textEl = document.createElement("span");
             textEl.classList.add("slot-text");
-            textEl.textContent = itemCount === 0 
-                ? `${fridge.name} - Empty` 
+            textEl.textContent = itemCount === 0
+                ? `${fridge.name} - Empty`
                 : `${fridge.name} - ${itemCount} items`;
-            
+
             const menuEl = document.createElement("span");
             menuEl.classList.add("slot-menu");
             menuEl.textContent = "⋮";
-            
+
             slot.appendChild(textEl);
             slot.appendChild(menuEl);
             
@@ -276,18 +333,23 @@ function setupIndexPage() {
             editOption.textContent = "Edit";
             editOption.addEventListener("click", (e) => {
                 e.stopPropagation();
-                window.location.href = `/edit?slot=${index + 1}`;
+                window.location.href = `/edit?fridge=${encodeURIComponent(fridge.name)}`;
             });
             
             const deleteOption = document.createElement("button");
             deleteOption.classList.add("context-option", "delete-option");
             deleteOption.textContent = "Delete";
-            deleteOption.addEventListener("click", (e) => {
+            deleteOption.addEventListener("click", async (e) => {
                 e.stopPropagation();
-                if (confirm(`Are you sure you want to delete "${fridge.name}" and all its contents?`)) {
-                    fridges.splice(index, 1);
-                    saveFridges(fridges);
-                    renderSlots();
+                if (confirm(`Are you sure you want to delete "${fridge.name}"?`)) {
+                    try {
+                        await apiFetch(`/api/fridge/${fridge.id}`, { method: "DELETE" });
+                        // remove from local list and re-render
+                        fridgesList = fridgesList.filter(f => f.id !== fridge.id);
+                        renderSlots();
+                    } catch (e) {
+                        console.error("Error deleting fridge:", e);
+                    }
                 }
             });
             
@@ -307,11 +369,11 @@ function setupIndexPage() {
             // Slot click - toggle selection
             slot.addEventListener("click", (e) => {
                 e.preventDefault();
-                if (selectedIndices.has(index)) {
-                    selectedIndices.delete(index);
+                if (selectedFridges.has(fridge.name)) {
+                    selectedFridges.delete(fridge.name);
                     slot.classList.remove("selected");
                 } else {
-                    selectedIndices.add(index);
+                    selectedFridges.add(fridge.name);
                     slot.classList.add("selected");
                 }
                 updateButtonState();
@@ -334,33 +396,70 @@ function setupIndexPage() {
 
     // Render initial slots
     renderSlots();
-    addFridgeBtn.addEventListener("click", () => {
-        const newFridge = {
-            name: `Fridge Slot ${fridges.length + 1}`,
-            items: {}
-        };
-        fridges.push(newFridge);
-        saveFridges(fridges);
-        renderSlots();
-    });
+    // now that real data is rendered, make container visible
+    fridgeSlotsContainer.style.visibility = "";
+    const loading = document.getElementById("loadingOverlay");
+    if (loading) loading.style.display = "none";
+    
+    // guard against multiple listeners/requests
+    if (!addFridgeBtn.dataset.listenerAttached) {
+        addFridgeBtn.dataset.listenerAttached = "true";
+        addFridgeBtn.addEventListener("click", async () => {
+            addFridgeBtn.disabled = true;
+            // slot index = max existing +1
+            const slotIndex = (fridgesList.length > 0 ? Math.max(...fridgesList.map(f => f.slot_index || 0)) : 0) + 1;
+            const fridgeName = `Fridge Slot ${slotIndex}`;
+            try {
+                const response = await apiFetch("/api/fridge", {
+                    method: "POST",
+                    body: JSON.stringify({
+                        name: fridgeName,
+                        slot_index: slotIndex,
+                        items: {}  // Empty inventory
+                    })
+                });
 
+                if (!response.ok) {
+                    const text = await response.text();
+                    console.error("Failed to create fridge:", response.status, text);
+                    alert("Failed to create fridge: " + (text || response.status));
+                } else {
+                    // reload full list
+                    fridgesList = await getFridges();
+                    fridgesList.sort((a, b) => (a.slot_index || 0) - (b.slot_index || 0));
+                    renderSlots();
+                }
+            } catch (e) {
+                console.error("Error creating fridge:", e);
+            } finally {
+                addFridgeBtn.disabled = false;
+            }
+        });
+    }
+    //DEBUG
+    
     // Get Recipes button handler
     getRecipesBtn.addEventListener("click", () => {
-        // Merge all selected fridge inventories
-        const mergedFridge = mergeSelectedFridges([...selectedIndices]);
+        console.log("fridgesList:", JSON.stringify(fridgesList));
+        console.log("selectedFridges:", [...selectedFridges]);
+        
+        const selectedItems = fridgesList
+            .filter(f => selectedFridges.has(f.name))
+            .flatMap(f => f.items);
+        
+        console.log("selectedItems:", JSON.stringify(selectedItems));
+        
+        const mergedFridge = mergeItems(selectedItems);
 
-        // Collect user preference filters
         const preferences = {
             calorieMin: parseInt(document.getElementById("calorieMin").value) || 0,
             calorieMax: parseInt(document.getElementById("calorieMax").value) || 9999,
             protein: parseInt(document.getElementById("proteinMin").value) || 0
         };
 
-        // Save to localStorage for recipes page to access
         localStorage.setItem("mergedFridge", JSON.stringify(mergedFridge));
         localStorage.setItem("preferences", JSON.stringify(preferences));
 
-        // Navigate to recipes page
         window.location.href = "/recipes";
     });
 }
@@ -374,7 +473,8 @@ function setupIndexPage() {
  * - edit_fridge.html: setupEditPage()
  */
 document.addEventListener("DOMContentLoaded", () => {
-    if (document.getElementById("fridgeSlots")) {
+    if (document.getElementById("fridgeSlots") && !indexInitialized) {
+        indexInitialized = true;
         setupIndexPage(); // Home page with fridge slots
     }
     if (document.querySelector(".fridge-name")) {
@@ -386,8 +486,11 @@ document.addEventListener("DOMContentLoaded", () => {
  * Refresh fridge display when returning to index page from another page.
  * Fires when page is restored from history (popstate).
  */
-window.addEventListener("pageshow", () => {
-    if (document.getElementById("fridgeSlots")) {
+let indexInitialized = false;
+
+window.addEventListener("pageshow", (e) => {
+    // only re-init on back/forward navigation
+    if (e.persisted && document.getElementById("fridgeSlots")) {
         setupIndexPage();
     }
 });
