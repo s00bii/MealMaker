@@ -6,3 +6,4 @@ beautifulsoup4==4.12.2
 PyJWT==2.8.0
 gunicorn
 setuptools
+cryptography
