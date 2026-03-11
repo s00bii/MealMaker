@@ -232,22 +232,62 @@ def recipes_page():
 @require_auth
 def get_fridges():
     """
-    Get all fridges for the authenticated user.
-    Proxies to Supabase REST API filtering by user_id.
+    Get all fridges for the authenticated user, including their items.
+    Returns: [{ id, name, items: [{id, name, quantity, unit}] }]
     """
     try:
         token = request.headers.get("Authorization", "").replace("Bearer ", "")
-        url = f"{SUPABASE_URL}/rest/v1/fridges"
-        params = {"user_id": f"eq.{g.user_id}", "select": "*"}
-        
-        response = requests.get(
-            url,
-            headers=supabase_headers(token),
-            params=params
+        base_headers = supabase_headers(token)
+
+        # Fetch all fridges for the user
+        fridges_resp = requests.get(
+            f"{SUPABASE_URL}/rest/v1/fridges",
+            headers=base_headers,
+            params={"user_id": f"eq.{g.user_id}", "select": "id,name"}
         )
-        
-        return jsonify(response.json()), response.status_code
+
+        if not fridges_resp.ok:
+            try:
+                body = fridges_resp.json()
+            except ValueError:
+                body = {"error": fridges_resp.text}
+            return jsonify(body), fridges_resp.status_code
+
+        fridges = fridges_resp.json()
+        result = []
+
+        # For each fridge, fetch its items from fridge_items
+        for fridge in fridges:
+            fridge_id = fridge.get("id")
+            if fridge_id is None:
+                continue
+
+            items_resp = requests.get(
+                f"{SUPABASE_URL}/rest/v1/fridge_items",
+                headers=base_headers,
+                params={
+                    "fridge_id": f"eq.{fridge_id}",
+                    "select": "id,name,quantity,unit"
+                }
+            )
+
+            if not items_resp.ok:
+                try:
+                    body = items_resp.json()
+                except ValueError:
+                    body = {"error": items_resp.text}
+                return jsonify(body), items_resp.status_code
+
+            items = items_resp.json()
+            result.append({
+                "id": fridge_id,
+                "name": fridge.get("name", ""),
+                "items": items,
+            })
+
+        return jsonify(result), 200
     except Exception as e:
+        app.logger.exception("Unhandled error in get_fridges")
         return jsonify({"error": str(e)}), 500
 
 @app.route("/api/fridge", methods=["POST"])
@@ -260,113 +300,225 @@ def create_fridge():
     """
     try:
         data = request.get_json(silent=True) or {}
-        
-        # Extract fields matching the actual table schema
+
         fridge_data = {
-            "name": data.get("name", "New Item"),
-            "quantity": data.get("quantity", 0),
-            "unit": data.get("unit", "pcs"),
-            "fridge_name": data.get("fridge_name", "My Fridge"),
-            "user_id": g.user_id
+            "name": data.get("name", "New Fridge"),
+            "user_id": g.user_id,
         }
-        # Enforce user ownership
-        fridge_data["user_id"] = g.user_id
-        
+
         token = request.headers.get("Authorization", "").replace("Bearer ", "")
         url = f"{SUPABASE_URL}/rest/v1/fridges"
-        
+
+        headers = supabase_headers(token)
+        # Ask Supabase to return the created row
+        headers["Prefer"] = "return=representation"
+
         response = requests.post(
             url,
-            headers=supabase_headers(token),
+            headers=headers,
             json=fridge_data
         )
-        
-        # log for debugging
-        app.logger.debug("create_fridge payload=%s status=%s body=%s", fridge_data, response.status_code, response.text)
-        
+
         # safely try to parse JSON in case body is empty or invalid
         try:
             resp_json = response.json()
         except ValueError:
             resp_json = {"raw_body": response.text}
+
+        # Supabase returns a list when using return=representation
+        if isinstance(resp_json, list) and resp_json:
+            resp_json = resp_json[0]
+
         return jsonify(resp_json), response.status_code
     except Exception as e:
         app.logger.exception("Unhandled error in create_fridge")
         return jsonify({"error": str(e)}), 500
 
-@app.route("/api/fridge/<item_id>", methods=["PUT"])
+@app.route("/api/fridge/<fridge_id>", methods=["PUT"])
 @require_auth
-def update_fridge(item_id):
+def update_fridge(fridge_id):
     """
-    Update a fridge item (name, quantity, unit, etc) if owned by the user.
-    Proxies to Supabase REST API with user_id filter.
+    Update fridge name if owned by the user.
+    Proxies to Supabase REST API with id and user_id filters.
     """
     try:
         data = request.get_json(silent=True) or {}
-        
+
+        update_data = {}
+        if "name" in data:
+            update_data["name"] = data["name"]
+
+        if not update_data:
+            return jsonify({"error": "No valid fields to update"}), 400
+
         token = request.headers.get("Authorization", "").replace("Bearer ", "")
         url = f"{SUPABASE_URL}/rest/v1/fridges"
         params = {
-            "id": f"eq.{item_id}",
+            "id": f"eq.{fridge_id}",
             "user_id": f"eq.{g.user_id}"
         }
-        
+
         response = requests.patch(
             url,
             headers=supabase_headers(token),
-            json=data,
+            json=update_data,
             params=params
         )
-        
-        return jsonify(response.json()), response.status_code
+
+        try:
+            body = response.json()
+        except ValueError:
+            body = {"raw_body": response.text}
+
+        return jsonify(body if body else {}), response.status_code
     except Exception as e:
+        app.logger.exception("Unhandled error in update_fridge")
         return jsonify({"error": str(e)}), 500
 
-@app.route("/api/fridge/<item_id>", methods=["DELETE"])
+@app.route("/api/fridge/<fridge_id>", methods=["DELETE"])
 @require_auth
-def delete_fridge_item(item_id):
+def delete_fridge(fridge_id):
     """
-    Delete a single fridge item if owned by the user.
+    Delete a fridge if owned by the user.
     Proxies to Supabase REST API with user_id filter.
     """
     try:
         token = request.headers.get("Authorization", "").replace("Bearer ", "")
         url = f"{SUPABASE_URL}/rest/v1/fridges"
         params = {
-            "id": f"eq.{item_id}",
+            "id": f"eq.{fridge_id}",
             "user_id": f"eq.{g.user_id}"
         }
-        
+
         response = requests.delete(
             url,
             headers=supabase_headers(token),
             params=params
         )
-        
-        return jsonify(response.json()) if response.text else jsonify({}), response.status_code
+
+        try:
+            body = response.json()
+        except ValueError:
+            body = {"raw_body": response.text} if response.text else {}
+
+        return jsonify(body if body else {}), response.status_code
     except Exception as e:
+        app.logger.exception("Unhandled error in delete_fridge")
         return jsonify({"error": str(e)}), 500
 
-@app.route("/api/fridge", methods=["DELETE"])
+@app.route("/api/fridge/<fridge_id>/items", methods=["POST"])
 @require_auth
-def delete_all_fridges():
+def create_fridge_item(fridge_id):
     """
-    Delete all fridges for the authenticated user.
-    Proxies to Supabase REST API filtering by user_id.
+    Create a new item in a specific fridge.
+    Inserts into fridge_items table with { fridge_id, name, quantity, unit }.
+    """
+    try:
+        data = request.get_json(silent=True) or {}
+
+        item_data = {
+            "fridge_id": fridge_id,
+            "name": data.get("name", "New Item"),
+            "quantity": data.get("quantity", 0),
+            "unit": data.get("unit", "pcs"),
+        }
+
+        token = request.headers.get("Authorization", "").replace("Bearer ", "")
+        url = f"{SUPABASE_URL}/rest/v1/fridge_items"
+
+        headers = supabase_headers(token)
+        headers["Prefer"] = "return=representation"
+
+        response = requests.post(
+            url,
+            headers=headers,
+            json=item_data,
+        )
+
+        try:
+            resp_json = response.json()
+        except ValueError:
+            resp_json = {"raw_body": response.text}
+
+        if isinstance(resp_json, list) and resp_json:
+            resp_json = resp_json[0]
+
+        return jsonify(resp_json), response.status_code
+    except Exception as e:
+        app.logger.exception("Unhandled error in create_fridge_item")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/fridge/<fridge_id>/items/<item_id>", methods=["PUT"])
+@require_auth
+def update_fridge_item(fridge_id, item_id):
+    """
+    Update a fridge item in fridge_items table.
+    """
+    try:
+        data = request.get_json(silent=True) or {}
+
+        update_data = {}
+        for field in ("name", "quantity", "unit"):
+            if field in data:
+                update_data[field] = data[field]
+
+        if not update_data:
+            return jsonify({"error": "No valid fields to update"}), 400
+
+        token = request.headers.get("Authorization", "").replace("Bearer ", "")
+        url = f"{SUPABASE_URL}/rest/v1/fridge_items"
+        params = {
+            "id": f"eq.{item_id}",
+            "fridge_id": f"eq.{fridge_id}",
+        }
+
+        response = requests.patch(
+            url,
+            headers=supabase_headers(token),
+            json=update_data,
+            params=params,
+        )
+
+        try:
+            body = response.json()
+        except ValueError:
+            body = {"raw_body": response.text}
+
+        return jsonify(body if body else {}), response.status_code
+    except Exception as e:
+        app.logger.exception("Unhandled error in update_fridge_item")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/fridge/<fridge_id>/items/<item_id>", methods=["DELETE"])
+@require_auth
+def delete_fridge_item(fridge_id, item_id):
+    """
+    Delete a fridge item from fridge_items table.
     """
     try:
         token = request.headers.get("Authorization", "").replace("Bearer ", "")
-        url = f"{SUPABASE_URL}/rest/v1/fridges"
-        params = {"user_id": f"eq.{g.user_id}"}
-        
+        url = f"{SUPABASE_URL}/rest/v1/fridge_items"
+        params = {
+            "id": f"eq.{item_id}",
+            "fridge_id": f"eq.{fridge_id}",
+        }
+
         response = requests.delete(
             url,
             headers=supabase_headers(token),
-            params=params
+            params=params,
         )
-        
-        return jsonify(response.json()) if response.text else jsonify({}), response.status_code
+
+        try:
+            body = response.json()
+        except ValueError:
+            body = {"raw_body": response.text} if response.text else {}
+
+        return jsonify(body if body else {}), response.status_code
     except Exception as e:
+        app.logger.exception("Unhandled error in delete_fridge_item")
         return jsonify({"error": str(e)}), 500
 
 # === ROUTE: Recipe Finder ===
@@ -393,9 +545,6 @@ def get_recipes():
             params={"select": "id,name,calories,protein_g,source_url"}
         )
         all_recipes = response.json()
-        # After fetching recipes
-        print("recipes response status:", response.status_code)
-        print("recipes data:", response.json())
 
         # Fetch all ingredients from Supabase
         ing_response = requests.get(
@@ -408,9 +557,6 @@ def get_recipes():
             params={"select": "recipe_id,ingredient,quantity,unit"}
         )
         all_ingredients = ing_response.json()
-        # After fetching ingredients  
-        print("ingredients response status:", ing_response.status_code)
-        print("ingredients data:", ing_response.json())
 
         # Normalize fridge keys to lowercase
         fridge_normalized = {k.lower(): float(v) for k, v in fridge.items() if v}

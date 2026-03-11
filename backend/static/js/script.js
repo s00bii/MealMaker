@@ -68,10 +68,6 @@ async function setupEditPage() {
         if (loading) loading.style.display = "none";
         return;
     }
-    // if a placeholder default row exists, treat as empty (shouldn't normally happen)
-    if (fridge.name === "Default") {
-        fridge.items = {};
-    }
 
     const fridgeNameEl = document.querySelector(".fridge-name");
     const itemList = document.getElementById("itemList");
@@ -100,21 +96,8 @@ async function setupEditPage() {
         }
     });
 
-    // convert JSON-object items into array for editing
-    let fridgeItems = [];
-    if (fridge.items && typeof fridge.items === "object") {
-        for (const [iname, iqty] of Object.entries(fridge.items)) {
-            fridgeItems.push({ name: iname, quantity: iqty, unit: "" });
-        }
-    }
-
-    function itemsToJson() {
-        const obj = {};
-        fridgeItems.forEach(it => {
-            if (it.name) obj[it.name] = it.quantity;
-        });
-        return obj;
-    }
+    // items are now returned as an array from the backend
+    let fridgeItems = Array.isArray(fridge.items) ? [...fridge.items] : [];
 
     /**
      * Sort items by quantity (highest first).
@@ -138,11 +121,19 @@ async function setupEditPage() {
             const li = document.createElement("li");
             li.classList.add("item");
             li.dataset.index = idx;
+            li.dataset.id = item.id;
             li.innerHTML = `
-                <span class="item-name" contenteditable="true">${item.name}</span>
-                <span class="item-qty" contenteditable="true">${item.quantity}</span>
+                <span class="item-name" contenteditable="true">${item.name || ""}</span>
+                <span class="item-qty" contenteditable="true">${item.quantity || ""}</span>
+                <select class="item-unit">
+                    <option value="g">g</option>
+                    <option value="ml">ml</option>
+                    <option value="pcs">pcs</option>
+                </select>
                 <button class="delete-btn">×</button>
             `;
+            const unitEl = li.querySelector(".item-unit");
+            unitEl.value = item.unit || "pcs";
             attachItemHandlers(li, item, idx);
             itemList.appendChild(li);
         });
@@ -151,46 +142,84 @@ async function setupEditPage() {
     function attachItemHandlers(li, item, idx) {
         const nameEl = li.querySelector(".item-name");
         const qtyEl = li.querySelector(".item-qty");
+        const unitEl = li.querySelector(".item-unit");
         const deleteBtn = li.querySelector(".delete-btn");
 
-        async function persistChanges() {
+        async function saveItem() {
+            if (!item.id) return;
             try {
-                // patch the fridge row with updated items JSON
-                await apiFetch(`/api/fridge/${fridge.id}`, {
+                await apiFetch(`/api/fridge/${fridge.id}/items/${item.id}`, {
                     method: "PUT",
-                    body: JSON.stringify({ items: itemsToJson() })
+                    body: JSON.stringify({
+                        name: item.name,
+                        quantity: item.quantity,
+                        unit: item.unit || "pcs"
+                    })
                 });
             } catch (e) {
-                console.error("Error updating fridge items", e);
+                console.error("Error updating fridge item", e);
             }
         }
 
         nameEl.addEventListener("blur", () => {
             item.name = nameEl.textContent.trim();
-            persistChanges();
+            saveItem();
         });
         qtyEl.addEventListener("blur", () => {
             item.quantity = qtyEl.textContent.trim();
-            persistChanges();
+            saveItem();
+        });
+        unitEl.addEventListener("change", () => {
+            item.unit = unitEl.value;
+            saveItem();
         });
 
         deleteBtn.addEventListener("click", async () => {
-            fridgeItems.splice(idx, 1);
-            renderItems();
-            await persistChanges();
+            if (!item.id) {
+                fridgeItems.splice(idx, 1);
+                renderItems();
+                return;
+            }
+            try {
+                await apiFetch(`/api/fridge/${fridge.id}/items/${item.id}`, {
+                    method: "DELETE"
+                });
+                fridgeItems.splice(idx, 1);
+                renderItems();
+            } catch (e) {
+                console.error("Error deleting fridge item", e);
+            }
         });
     }
 
     addItemBtn.addEventListener("click", async () => {
-        fridgeItems.push({ name: "New Item", quantity: "0", unit: "" });
-        renderItems();
+        addItemBtn.disabled = true;
         try {
-            await apiFetch(`/api/fridge/${fridge.id}`, {
-                method: "PUT",
-                body: JSON.stringify({ items: itemsToJson() })
+            const response = await apiFetch(`/api/fridge/${fridge.id}/items`, {
+                method: "POST",
+                body: JSON.stringify({
+                    name: "New Item",
+                    quantity: "0",
+                    unit: "pcs"
+                })
             });
+            if (!response.ok) {
+                const text = await response.text();
+                console.error("Failed to create item:", response.status, text);
+                alert("Failed to add item: " + (text || response.status));
+            } else {
+                let created = await response.json();
+                if (Array.isArray(created) && created.length > 0) {
+                    created = created[0];
+                }
+                fridgeItems.push(created);
+                fridge.items = fridgeItems;
+                renderItems();
+            }
         } catch (e) {
             console.error("Error adding item to fridge", e);
+        } finally {
+            addItemBtn.disabled = false;
         }
     });
 
@@ -302,7 +331,7 @@ async function setupIndexPage() {
         fridgeSlotsContainer.innerHTML = "";
 
         fridgesList.forEach((fridge, index) => {
-            const itemCount = fridge.items ? Object.keys(fridge.items).length : 0;
+            const itemCount = fridge.items ? fridge.items.length : 0;
 
             const slotWrapper = document.createElement("div");
             slotWrapper.classList.add("slot-wrapper");
@@ -407,15 +436,13 @@ async function setupIndexPage() {
         addFridgeBtn.addEventListener("click", async () => {
             addFridgeBtn.disabled = true;
             // slot index = max existing +1
-            const slotIndex = (fridgesList.length > 0 ? Math.max(...fridgesList.map(f => f.slot_index || 0)) : 0) + 1;
+                const slotIndex = (fridgesList.length > 0 ? Math.max(...fridgesList.map(f => f.slot_index || 0)) : 0) + 1;
             const fridgeName = `Fridge Slot ${slotIndex}`;
             try {
                 const response = await apiFetch("/api/fridge", {
                     method: "POST",
                     body: JSON.stringify({
-                        name: fridgeName,
-                        slot_index: slotIndex,
-                        items: {}  // Empty inventory
+                            name: fridgeName
                     })
                 });
 
